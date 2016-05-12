@@ -9,9 +9,13 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([]).
+-export([start_child/0,start_link/0]).
 
+start_child() ->
+	supervisor:start_child(?MODULE, []).
 
+start_link() ->
+	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% ====================================================================
 %% Behavioural functions
@@ -35,9 +39,9 @@
 	Modules :: [module()] | dynamic.
 %% ====================================================================
 init([]) ->
-    AChild = {'AName',{'AModule',start_link,[]},
-	      permanent,2000,worker,['AModule']},
-    {ok,{{one_for_all,0,1}, [AChild]}}.
+    AChild = {'cs_client',{'cs_client',start_link,[]},
+	      temporary,2000,worker,['cs_client']},
+    {ok,{{simple_one_for_one,0,1}, [AChild]}}.
 
 %% ====================================================================
 %% Internal functions

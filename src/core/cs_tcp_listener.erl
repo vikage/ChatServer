@@ -4,20 +4,24 @@
 
 -module(cs_tcp_listener).
 -behaviour(gen_server).
+-include("cs.hrl").
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([]).
+-export([start_link/0]).
 
 
 
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {}).
+-record(state, {listenSocket, port}).
 
+
+start_link() ->
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 %% init/1
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/gen_server.html#Module:init-1">gen_server:init/1</a>
@@ -31,8 +35,14 @@
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    {ok, #state{}}.
-
+	Opts = cs_config:get_config(?SOCKET_OPTS, [{active,once},binary,[reuseaddr,true]]),
+	Port = cs_config:get_config(?PORT, 9999),
+	case gen_tcp:listen(Port, Opts) of
+		{error,Reason} -> {stop, Reason};
+		{ok,ListenSocket} ->
+			prim_inet:async_accept(ListenSocket, -1),
+			{ok,#state{port = Port, listenSocket = ListenSocket}}
+	end.
 
 %% handle_call/3
 %% ====================================================================
@@ -82,6 +92,15 @@ handle_cast(Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
+handle_info({inet_async, ListenSocket, _Ref, {ok, ClientSocket}}, State) ->
+	lager:info("Client connected at ~p~n",[ClientSocket]),
+	inet_db:register_socket(ClientSocket, inet_tcp),
+	inet:setopts(ClientSocket, [{active, once}]),
+	{ok, Pid} = cs_client_sup:start_child(),
+	gen_tcp:controlling_process(ClientSocket, Pid),
+	cs_client:set_socket(ClientSocket, Pid),
+	prim_inet:async_accept(ListenSocket, -1),
+	{noreply, State};
 handle_info(Info, State) ->
     {noreply, State}.
 

@@ -23,5 +23,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+	Childs = [?CHILD('cs_tcp_listener', worker),
+			  ?CHILD('cs_client_sup',supervisor)],
+    {ok, { {one_for_one, 5, 10}, Childs}}.
 

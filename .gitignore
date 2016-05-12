@@ -4,3 +4,4 @@ log/
 *.log
 *.DS_Store
 .rebar/
+/Mnesia.chat_server@Undefined/
