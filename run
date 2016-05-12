@@ -1,0 +1,4 @@
+#!/bin/bash
+rebar co
+erl -pa ebin -pa deps/*/ebin -s lager -sname chat_server -s cs_app
+exit 0

@@ -1,0 +1,6 @@
+ebin/
+deps/
+log/
+*.log
+*.DS_Store
+.rebar/

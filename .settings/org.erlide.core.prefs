@@ -1,0 +1,8 @@
+backend_version=18.0
+compiler/parse_transform=lager_transform
+eclipse.preferences.version=1
+external_includes=
+external_modules=
+include_dirs=include;
+output_dir=ebin
+source_dirs=src;src/backend;src/db;src/core;
