@@ -35,5 +35,11 @@ decode_data(?GROUP_USER, ?TYPE_LOGIN, Data) ->
 	Username = maps:get(<<"username">>, Data),
 	Password = maps:get(<<"password">>, Data),
 	#cmd_login{username = Username, password = Password};
+decode_data(?GROUP_USER, ?TYPE_USER_INFO, Data) ->
+	UserName = maps:get(<<"username">>, Data),
+	#cmd_user_info{username = UserName};
+decode_data(?GROUP_USER, ?TYPE_USER_AUTH, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	#cmd_user_auth{token = Token};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

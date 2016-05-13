@@ -3,11 +3,11 @@
 
 
 -module(cs_client_manager).
-
+-include("cs.hrl").
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([]).
+-export([add_client/3,remove_client/1]).
 
 
 
@@ -16,3 +16,11 @@
 %% ====================================================================
 
 
+add_client(UserName,Token,Pid) when is_pid(Pid) ->
+	lager:debug("New client online with name \"~p\" at ~p~n",[UserName, Pid]),
+	cs_client:change_state_online(UserName, Token, Pid),
+	ets:insert(tbl_user_onl, #tbl_user_onl{username = UserName, pid = Pid}).
+
+remove_client(UserName) ->
+	lager:debug("Client remove with name \"~p\"", [UserName]),
+	ets:delete(tbl_user_onl, UserName).

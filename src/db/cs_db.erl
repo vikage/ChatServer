@@ -18,13 +18,19 @@
 create_db() ->
 	case catch mnesia:table_info(tbl_users, all) of
 		{'EXIT', _} ->		% If table not exists
-			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]}, {attributes, record_info(fields, tbl_users)}]);
+			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]},{index,[username,email]},{type,ordered_set},{attributes, record_info(fields, tbl_users)}]);
+		_ -> created
+	end,
+	case catch mnesia:table_info(tbl_token, all) of
+		{'EXIT', _} -> 
+			{atomic, ok} = mnesia:create_table(tbl_token, [{disc_copies, [node()]},{attributes, record_info(fields, tbl_token)}]);
 		_ -> created
 	end,
 	ok.
 
 create_ets() ->
-	ets:new(tbl_config, [named_table, public]).
+	ets:new(tbl_config, [named_table, public]),
+	ets:new(tbl_user_onl, [named_table, public,{keypos, 2}]).
 
 read(Tab, Id) ->
 	case catch mnesia:dirty_read(Tab, Id) of
