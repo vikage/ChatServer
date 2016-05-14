@@ -37,7 +37,8 @@ start_link() ->
 %% ====================================================================
 init([]) ->
     Childs = [?CHILD('cs_user_db',worker),
-			  ?CHILD('cs_token_db',worker)],
+			  ?CHILD('cs_token_db',worker),
+			  ?CHILD('cs_message_db', worker)],
     {ok, { {one_for_one, 5, 10}, Childs}}.
 
 %% ====================================================================

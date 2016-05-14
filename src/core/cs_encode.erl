@@ -39,8 +39,13 @@ encode_data(#res_user_auth{}) ->
 	[];
 encode_data(#res_send_message{}) ->
 	[];
-encode_data(#res_received_message{from_user_name = FromUserName, message = Message}) ->
-	[{<<"from_user_name">>, FromUserName}, {<<"message">>, Message}];
+encode_data(#res_received_message{from_user_name = FromUserName, message = Message, datetime = DateTime, message_id = MessageId}) ->
+	[{<<"from_user_name">>, FromUserName},
+	 {<<"message">>, Message},
+	 {<<"message_id">>, MessageId},
+	 {<<"datetime">>, DateTime}];
+encode_data(#res_confirm_received_message{}) ->
+	[];
 encode_data(_) ->
 	undefined.
 

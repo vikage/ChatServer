@@ -26,6 +26,11 @@ create_db() ->
 			{atomic, ok} = mnesia:create_table(tbl_token, [{disc_copies, [node()]},{attributes, record_info(fields, tbl_token)}]);
 		_ -> created
 	end,
+	case catch mnesia:table_info(tbl_message, all) of
+		{'EXIT', _} -> 
+			{atomic, ok} = mnesia:create_table(tbl_message, [{disc_copies, [node()]},{type,ordered_set},{attributes, record_info(fields, tbl_message)}]);
+		_ -> created
+	end,
 	ok.
 
 create_ets() ->

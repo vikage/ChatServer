@@ -66,22 +66,47 @@ process(#cmd_send_message{token = Token, message = Message, to_user_name = ToUse
 		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
 						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
 		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
-						  % Find user from cs_client_manager
-						  case cs_client_manager:find_client(ToUserName) of
-							  {error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUserName,Reason]);
-							  {ok, #tbl_user_onl{pid = U_Pid}} ->
-								  lager:info("Detect user ~p at Pid: ~p~n", [ToUserName, U_Pid]),
-								  DataRev = #res_received_message{from_user_name = UserName, message = Message},
-								  ResponseReceivedMessage = #response{group = ?GROUP_CHAT,
-																	  type = ?TYPE_RECEIVED_MESSAGE,
-																	  req_id = 0,
-																	  result = 0,
-																	  data = DataRev},
-								  ResponseBin = cs_encode:encode(ResponseReceivedMessage),	
-								  Len = byte_size(ResponseBin),
-								  cs_client:received_message(U_Pid, <<Len:16,ResponseBin/binary>>)
-						  end,
-						  {?API_DONE, #res_send_message{}}
+						  %Save message
+						  MessageObj = #tbl_message{to_user = ToUserName, from_user = UserName, message = Message},
+						  case cs_message_db:new_message(MessageObj) of
+							  #db_res{result = #tbl_message{message_id = MessageId, datetime = DateTime}} ->
+								  % Find user from cs_client_manager
+								  case cs_client_manager:find_client(ToUserName) of
+									  {error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUserName,Reason]);
+									  {ok, #tbl_user_onl{pid = U_Pid}} ->
+										  lager:info("Detect user ~p at Pid: ~p~n", [ToUserName, U_Pid]),
+										  DataRev = #res_received_message{from_user_name = UserName,
+																		  message = Message,
+																		  message_id = MessageId,
+																		  datetime = DateTime},
+										  ResponseReceivedMessage = #response{group = ?GROUP_CHAT,
+																			  type = ?TYPE_RECEIVED_MESSAGE,
+																			  req_id = 0,
+																			  result = 0,
+																			  data = DataRev},
+										  ResponseBin = cs_encode:encode(ResponseReceivedMessage),	
+										  Len = byte_size(ResponseBin),
+										  cs_client:received_message(U_Pid, <<Len:16,ResponseBin/binary>>)
+								  
+								  end,
+								  {?API_DONE, #res_send_message{}};
+							  _ -> {?API_SYSTEM_FAIL, undefined}
+						  end
+	end;
+process(#cmd_config_received_message{message_id = MessageId, token = Token}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						  case cs_message_db:get_message(MessageId) of
+							  #db_res{result = #tbl_message{to_user = UserName}} ->								  
+								   case cs_message_db:delete_message(MessageId) of
+									  #db_res{error = ?DB_DONE} ->
+										  {?API_DONE, #res_confirm_received_message{}};
+									  _ -> {?API_SYSTEM_FAIL, #res_confirm_received_message{}}
+								  end;
+							  _ -> {?API_CONFIRM_MESSAGE_NOT_OF_YOU, undefined}
+						  end
 	end;
 process(_Req, _StateData) ->
 	undefied.

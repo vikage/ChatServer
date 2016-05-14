@@ -153,28 +153,19 @@ handle_sync_event(Event, From, StateName, StateData) ->
     {reply, Reply, StateName, StateData}.
 
 
-%% handle_info/3
-%% ====================================================================
-%% @doc <a href="http://www.erlang.org/doc/man/gen_fsm.html#Module:handle_info-3">gen_fsm:handle_info/3</a>
--spec handle_info(Info :: term(), StateName :: atom(), StateData :: term()) -> Result when
-	Result :: {next_state, NextStateName, NewStateData}
-			| {next_state, NextStateName, NewStateData, Timeout}
-			| {next_state, NextStateName, NewStateData, hibernate}
-			| {stop, Reason, NewStateData},
-	NextStateName :: atom(),
-	NewStateData :: term(),
-	Timeout :: non_neg_integer() | infinity,
-	Reason :: normal | term().
-%% ====================================================================
-
-
 handle_info({tcp, Socket, Packet}, StateName, StateData) ->
 	inet:setopts(Socket, [{active, once}]),
 	?MODULE:StateName({data, Packet}, StateData);
-handle_info({tcp_closed, Socket}, _StateName, StateData = #state{username = UserName}) ->
-	lager:debug("Client disconnected at ~p~n",[Socket]),
-	cs_client_manager:remove_client(UserName),
+handle_info({tcp_closed, _Socket}, _StateName, StateData = #state{username = _UserName}) ->
+	%lager:debug("Client disconnected at ~p~n",[Socket]),
+	%cs_client_manager:remove_client(UserName, self()),
     {stop, normal, StateData};
+handle_info({kill}, _StateName, StateData = #state{socket = Socket}) ->
+	A = <<"close">>,
+	Len = byte_size(A),
+	gen_tcp:send(Socket, <<Len:16,A/binary>>),
+	gen_tcp:close(Socket),
+	{stop, normal, StateData};
 handle_info(Info, StateName, StateData) ->
 	lager:debug("Unknow message ~p from StateName: ~p~n", [Info, StateName]),
     {next_state, StateName, StateData}.
@@ -192,6 +183,7 @@ handle_info(Info, StateName, StateData) ->
 terminate(_Reason, _StateName, _StateData = #state{username = UserName, socket = Socket}) ->
 	lager:debug("Client disconnected at ~p~n",[Socket]),
 	cs_client_manager:remove_client(UserName),
+	gen_tcp:close(Socket),
     ok.
 
 

@@ -25,7 +25,7 @@ merge([H1|T1],[H2|T2]) ->
 	end.
 get_date_time(TimeStamp) ->
 	{{Year,Month,Day},{Hour,Min,Sec}} = calendar:now_to_local_time(TimeStamp),
-	lists:flatten(io_lib:format("~p/~p/~p ~p:~p:~p", [Day,Month,Year,Hour,Min,Sec])).
+	list_to_binary(lists:flatten(io_lib:format("~p/~p/~p ~p:~p:~p", [Day,Month,Year,Hour,Min,Sec]))).
 
 get_time_stamp_integer(TimeStamp) ->
 	{MegaSec, Sec,_} = TimeStamp,

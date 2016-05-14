@@ -46,5 +46,9 @@ decode_data(?GROUP_CHAT, ?TYPE_SEND_MESSAGE, Data) ->
 	ToUserName = maps:get(<<"to_user_name">>, Data),
 	Message = maps:get(<<"message">>, Data),
 	#cmd_send_message{token = Token, to_user_name = ToUserName, message = Message};
+decode_data(?GROUP_CHAT, ?TYPE_CONFIRM_RECEIVED_MESSAGE, Data) ->
+	MessageId = maps:get(<<"message_id">>, Data),
+	Token = maps:get(<<"token">>, Data),
+	#cmd_config_received_message{message_id = MessageId, token = Token};
 decode_data(_Group, _Type, _Data) ->
 	undefined.
