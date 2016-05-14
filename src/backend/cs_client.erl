@@ -10,7 +10,7 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0,set_socket/2]).
--export([wait_for_socket/2,wait_for_data/2,change_state_online/3,auth/2]).
+-export([wait_for_socket/2,wait_for_auth/2,wait_for_data/2,change_state_online/3,auth/2,check_token/2,received_message/2]).
 
 
 start_link() ->
@@ -25,7 +25,8 @@ set_socket(Socket, Pid) when is_pid(Pid), is_port(Socket) ->
 	gen_fsm:send_event(Pid, {socket_ready, Socket}).
 
 change_state_online(UserName,Token,Pid) when is_pid(Pid) ->
-	Pid ! {change_state_online,UserName,Token}.
+	%Pid ! {change_state_online,UserName,Token}.
+	gen_fsm:send_event(Pid, {auth_success, UserName, Token}).
 
 % check token expire after 60day
 check_token_expire(_Token = #tbl_token{create_date = CreateDate}) ->
@@ -51,6 +52,17 @@ auth(TokenString,Pid) ->
 			end;
 		_ -> {error, token_not_exist}
 	end.
+
+check_token(TokenString, StateData) ->
+	#state{token = Token, username = UserName} = StateData,
+	if
+		Token == TokenString ->
+				{ok, UserName};
+			true -> {error, token_fail}
+	end.
+
+received_message(Pid, Binary) ->
+	gen_fsm:send_event(Pid, {received_message, Binary}).
 %% init/1
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/gen_fsm.html#Module:init-1">gen_fsm:init/1</a>
@@ -71,16 +83,35 @@ init([]) ->
 
 wait_for_socket({socket_ready, Socket}, _StateData) ->
 	inet:setopts(Socket, [{active, once}]),
-	{next_state, wait_for_data, #state{socket = Socket}};
+	{next_state, wait_for_auth, #state{socket = Socket}};
 wait_for_socket(_Event,StateData) ->
 	{next_state, wait_for_socket, StateData}.
 
+% wait_for_data - after auth
 wait_for_data({data, Packet}, #state{socket = Socket} = StateData) ->
 	%lager:debug("Received data ~p~n", [Packet]),
-	cs_process_data:process_data(Packet, Socket),
+	cs_process_data:process_data(Packet, Socket,StateData),
+	{next_state, wait_for_data, StateData};
+wait_for_data({received_message, Binary}, StateData = #state{socket = Socket}) ->
+	gen_tcp:send(Socket, Binary),
 	{next_state, wait_for_data, StateData};
 wait_for_data(_Event, StateData) ->
 	{next_state, wait_for_data, StateData}.
+
+% wait_for_auth
+wait_for_auth({data, Packet}, #state{socket = Socket} = StateData) ->
+	cs_process_data:process_data(Packet, Socket,StateData),
+	{next_state, wait_for_auth, StateData};
+wait_for_auth({auth_success, UserName, Token}, StateData) ->
+	NewState = StateData#state{username = UserName, token = Token},
+	lager:info("Auth success with UserName: ~p, Token: ~p~n", [UserName, Token]),
+	{next_state, wait_for_data, NewState};
+wait_for_auth(_Event, StateData) ->
+	{next_state, wait_for_auth, StateData}.
+
+
+%% wait_for_auth(_Event,StateData) ->
+%% 	{next_state, wait_for_auth, StateData}.
 
 %% handle_event/3
 %% ====================================================================
@@ -144,9 +175,6 @@ handle_info({tcp_closed, Socket}, _StateName, StateData = #state{username = User
 	lager:debug("Client disconnected at ~p~n",[Socket]),
 	cs_client_manager:remove_client(UserName),
     {stop, normal, StateData};
-handle_info({change_state_online,UserName,Token}, StateName,StateData) ->
-	NewState = StateData#state{username = UserName, token = Token},
-	{next_state, StateName, NewState};
 handle_info(Info, StateName, StateData) ->
 	lager:debug("Unknow message ~p from StateName: ~p~n", [Info, StateName]),
     {next_state, StateName, StateData}.
@@ -161,7 +189,9 @@ handle_info(Info, StateName, StateData) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, StateName, StatData) ->
+terminate(_Reason, _StateName, _StateData = #state{username = UserName, socket = Socket}) ->
+	lager:debug("Client disconnected at ~p~n",[Socket]),
+	cs_client_manager:remove_client(UserName),
     ok.
 
 

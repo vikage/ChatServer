@@ -41,5 +41,10 @@ decode_data(?GROUP_USER, ?TYPE_USER_INFO, Data) ->
 decode_data(?GROUP_USER, ?TYPE_USER_AUTH, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	#cmd_user_auth{token = Token};
+decode_data(?GROUP_CHAT, ?TYPE_SEND_MESSAGE, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	ToUserName = maps:get(<<"to_user_name">>, Data),
+	Message = maps:get(<<"message">>, Data),
+	#cmd_send_message{token = Token, to_user_name = ToUserName, message = Message};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

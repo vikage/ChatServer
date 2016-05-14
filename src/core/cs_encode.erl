@@ -37,6 +37,10 @@ encode_data(#res_user_info{username = UserName,
 			  {<<"email">>, Email}]);
 encode_data(#res_user_auth{}) ->
 	[];
+encode_data(#res_send_message{}) ->
+	[];
+encode_data(#res_received_message{from_user_name = FromUserName, message = Message}) ->
+	[{<<"from_user_name">>, FromUserName}, {<<"message">>, Message}];
 encode_data(_) ->
 	undefined.
 
