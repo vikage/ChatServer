@@ -1,6 +1,6 @@
--record(tbl_users,{uid, username,password,fullname,phone,email, create_date}).
+-record(tbl_users,{username,password,fullname,phone,email, create_date}).
 -record(tbl_config,{key,val}).
--record(tbl_token,{token_string,uid, create_date}).
+-record(tbl_token,{token_string,username, create_date}).
 -record(tbl_user_onl,{username,pid}).
 -record(tbl_message,{message_id, message, from_user, to_user, datetime}).
 
@@ -13,6 +13,7 @@
 -define(DB_ITEM_EXIST,			16#0002).
 -define(DB_REQ_PARAMETER_FAIL, 	16#0003).
 -define(DB_SYS_ERROR,			16#0004).
+-define(DB_EMPTY,				16#0005).			
 
 -record(db_user_new,{user}).
 -record(db_user_info,{uid}).
@@ -25,3 +26,4 @@
 -record(db_message_new, {messageObj}).
 -record(db_message_delete,{message_id}).
 -record(db_message_get,{message_id}).
+-record(db_message_get_message_of_user,{username}).

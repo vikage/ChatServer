@@ -49,6 +49,9 @@ decode_data(?GROUP_CHAT, ?TYPE_SEND_MESSAGE, Data) ->
 decode_data(?GROUP_CHAT, ?TYPE_CONFIRM_RECEIVED_MESSAGE, Data) ->
 	MessageId = maps:get(<<"message_id">>, Data),
 	Token = maps:get(<<"token">>, Data),
-	#cmd_config_received_message{message_id = MessageId, token = Token};
+	#cmd_confirm_received_message{message_id = MessageId, token = Token};
+decode_data(?GROUP_CHAT, ?TYPE_CONFIRM_RECEIVED_OFFLINE_MESSAGE, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	#cmd_confirm_received_offline_message{token = Token};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

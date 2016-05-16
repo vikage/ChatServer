@@ -32,8 +32,8 @@ process_data(Bin,Socket,StateData) ->
 
 process(#cmd_login{username = UserName, password = Password}, _StateData) ->
 	case cs_user_db:user_info_username(UserName) of
-		#db_res{result = #tbl_users{password = Password, uid = Uid}} ->
-			case cs_token_db:new_token(Uid) of
+		#db_res{result = #tbl_users{password = Password}} ->
+			case cs_token_db:new_token(UserName) of
 				#db_res{result = Token} -> 
 					% add new client
 					cs_client_manager:add_client(UserName,Token#tbl_token.token_string, self()),
@@ -89,11 +89,11 @@ process(#cmd_send_message{token = Token, message = Message, to_user_name = ToUse
 										  cs_client:received_message(U_Pid, <<Len:16,ResponseBin/binary>>)
 								  
 								  end,
-								  {?API_DONE, #res_send_message{}};
+								  {?API_DONE, #res_send_message{time = DateTime}};
 							  _ -> {?API_SYSTEM_FAIL, undefined}
 						  end
 	end;
-process(#cmd_config_received_message{message_id = MessageId, token = Token}, StateData) ->
+process(#cmd_confirm_received_message{message_id = MessageId, token = Token}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
 		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
 						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
@@ -106,6 +106,18 @@ process(#cmd_config_received_message{message_id = MessageId, token = Token}, Sta
 									  _ -> {?API_SYSTEM_FAIL, #res_confirm_received_message{}}
 								  end;
 							  _ -> {?API_CONFIRM_MESSAGE_NOT_OF_YOU, undefined}
+						  end
+	end;
+process(#cmd_confirm_received_offline_message{token = Token}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						  case cs_message_db:get_message_of_user(UserName) of
+							  #db_res{error = ?DB_DONE, result = ListMessage} ->
+								  [cs_message_db:delete_message(MessageId) || #tbl_message{message_id = MessageId} <- ListMessage],
+								  {?API_DONE, undefined};
+							  _ -> {?API_DONE, undefined}
 						  end
 	end;
 process(_Req, _StateData) ->

@@ -26,7 +26,7 @@ encode(_Res = #response{group = Group, type = Type, req_id = ReqId, result = Res
 		_ -> jsx:encode(JsonArray ++ [{<<"data">>, <<"">>}])
 	end.
 encode_data(#res_login{token = Token}) ->
-	validate([{<<"token">>,Token}]);
+	[{<<"token">>,Token}];
 encode_data(#res_user_info{username = UserName,
 						   fullname = FullName,
 						   phone 	= Phone,
@@ -37,8 +37,8 @@ encode_data(#res_user_info{username = UserName,
 			  {<<"email">>, Email}]);
 encode_data(#res_user_auth{}) ->
 	[];
-encode_data(#res_send_message{}) ->
-	[];
+encode_data(#res_send_message{time = Time}) ->
+	[{<<"time">>,Time}];
 encode_data(#res_received_message{from_user_name = FromUserName, message = Message, datetime = DateTime, message_id = MessageId}) ->
 	[{<<"from_user_name">>, FromUserName},
 	 {<<"message">>, Message},
@@ -46,8 +46,18 @@ encode_data(#res_received_message{from_user_name = FromUserName, message = Messa
 	 {<<"datetime">>, DateTime}];
 encode_data(#res_confirm_received_message{}) ->
 	[];
+encode_data(#res_message_offline{list_message = ListMessage}) ->
+	lists:foldl(fun(#tbl_message{from_user = FromUserName,
+								 message = Message,
+								 datetime = DateTime,
+								 message_id = MessageId}, R) -> 
+						[[{<<"from_user_name">>, FromUserName},
+						  {<<"message">>, Message},
+						  {<<"message_id">>, MessageId},
+						  {<<"datetime">>, DateTime}] | R]
+				end, [], ListMessage);
 encode_data(_) ->
-	undefined.
+	[].
 
 validate([]) ->
 	[];

@@ -34,9 +34,9 @@ start_link() ->
 init([]) ->
     {ok, #state{}}.
 
-new_token(Uid) ->
+new_token(UserName) ->
 	TokenString = gen_token(),
-	Token = #tbl_token{token_string = TokenString, uid = Uid, create_date = erlang:timestamp()},
+	Token = #tbl_token{token_string = TokenString, username = UserName, create_date = erlang:timestamp()},
 	call(#db_token_new{token = Token}).
 
 get_token(TokenString) ->

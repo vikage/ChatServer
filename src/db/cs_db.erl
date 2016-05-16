@@ -18,7 +18,7 @@
 create_db() ->
 	case catch mnesia:table_info(tbl_users, all) of
 		{'EXIT', _} ->		% If table not exists
-			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]},{index,[username,email]},{type,ordered_set},{attributes, record_info(fields, tbl_users)}]);
+			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]},{index,[email]},{type,ordered_set},{attributes, record_info(fields, tbl_users)}]);
 		_ -> created
 	end,
 	case catch mnesia:table_info(tbl_token, all) of
@@ -28,7 +28,7 @@ create_db() ->
 	end,
 	case catch mnesia:table_info(tbl_message, all) of
 		{'EXIT', _} -> 
-			{atomic, ok} = mnesia:create_table(tbl_message, [{disc_copies, [node()]},{type,ordered_set},{attributes, record_info(fields, tbl_message)}]);
+			{atomic, ok} = mnesia:create_table(tbl_message, [{disc_copies, [node()]},{index,[to_user]},{type,ordered_set},{attributes, record_info(fields, tbl_message)}]);
 		_ -> created
 	end,
 	ok.

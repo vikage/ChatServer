@@ -142,20 +142,12 @@ process(#db_user_new{user = #tbl_users{username = undefined}}) ->
 process(#db_user_new{user = #tbl_users{password = undefined}}) ->
 	#db_res{error = ?DB_REQ_PARAMETER_FAIL};
 process(#db_user_new{user = U = #tbl_users{username = Username}}) ->
-	case cs_db:index_read(tbl_users, Username, username) of
+	case cs_db:read(tbl_users, Username) of
 		[#tbl_users{}] -> #db_res{error = ?DB_ITEM_EXIST};
 		[] -> 
-			case cs_db:read_last(tbl_users) of
-				{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR};
-				'$end_of_table' ->
-					NewU = U#tbl_users{uid = 1},
-					cs_db:write(tbl_users, NewU),
-					#db_res{result = NewU};
-				CurrentId ->
-					NewU = U#tbl_users{uid = CurrentId + 1},
-					cs_db:write(tbl_users, NewU),
-					#db_res{result = NewU}
-			end
+			NewU = U#tbl_users{},
+			cs_db:write(tbl_users, NewU),
+			#db_res{result = NewU}
 	end;
 process(#db_user_info{uid = Uid}) ->
 	case cs_db:read(tbl_users, Uid) of
@@ -164,13 +156,13 @@ process(#db_user_info{uid = Uid}) ->
 		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
 	end;
 process(#db_user_info_username{username = UserName}) ->
-	case cs_db:index_read(tbl_users, UserName, username) of
+	case cs_db:read(tbl_users, UserName) of
 		[] -> #db_res{error = ?DB_NOT_FOUND};
 		[User] -> #db_res{result = User};
 		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
 	end;
-process(#db_user_update{user = U = #tbl_users{uid = Uid}}) ->
-	case cs_db:read(tbl_users, Uid) of
+process(#db_user_update{user = U = #tbl_users{username = UserName}}) ->
+	case cs_db:read(tbl_users, UserName) of
 		[] -> #db_res{error = ?DB_NOT_FOUND};
 		[CurrentU = #tbl_users{}] ->
 			NewU = list_to_tuple(util:merge(tuple_to_list(CurrentU), tuple_to_list(U))),

@@ -9,7 +9,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0,new_message/1,delete_message/1,get_message/1]).
+-export([start_link/0,new_message/1,delete_message/1,get_message/1,get_message_of_user/1]).
 
 
 
@@ -123,7 +123,9 @@ delete_message(MessageId) ->
 	call(#db_message_delete{message_id = MessageId}).
 get_message(MessageId) ->
 	call(#db_message_get{message_id = MessageId}).
-	
+get_message_of_user(UserName) ->
+	call(#db_message_get_message_of_user{username = UserName}).
+
 call(Data) ->
 	Req = #db_request{data = Data},
 	gen_server:call(?MODULE, {db_query,Req}).
@@ -152,6 +154,12 @@ process(#db_message_get{message_id = Msg_id}) ->
 		[] -> #db_res{error = ?DB_NOT_FOUND};
 		[Message = #tbl_message{}] ->
 			#db_res{result = Message}
+	end;
+process(#db_message_get_message_of_user{username = UserName}) ->
+	case cs_db:index_read(tbl_message, UserName, to_user) of
+		{error, Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR};
+		[] -> #db_res{error = ?DB_EMPTY};
+		List = [_|_] -> #db_res{result = List}
 	end;
 process(_Request) ->
 	{error, badmatch}.
