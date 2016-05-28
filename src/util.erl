@@ -25,7 +25,7 @@ merge([H1|T1],[H2|T2]) ->
 	end.
 get_date_time(TimeStamp) ->
 	{{Year,Month,Day},{Hour,Min,Sec}} = calendar:now_to_local_time(TimeStamp),
-	list_to_binary(lists:flatten(io_lib:format("~p/~p/~p ~p:~p:~p", [Day,Month,Year,Hour,Min,Sec]))).
+	list_to_binary(lists:flatten(io_lib:format("~2.10.0B/~2.10.0B/~4.10.0B ~2.10.0B:~2.10.0B:~2.10.0B", [Day,Month,Year,Hour,Min,Sec]))).
 
 get_current_date_time()->
 	get_date_time(erlang:timestamp()).

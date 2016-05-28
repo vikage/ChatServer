@@ -1,4 +1,4 @@
--record(tbl_users,{username,password,fullname,phone,email, create_date}).
+-record(tbl_users,{username,password,fullname = <<"">>,phone = <<"">>,email = <<"">>, create_date}).
 -record(tbl_config,{key,val}).
 -record(tbl_token,{token_string,username, create_date}).
 -record(tbl_user_onl,{username,pid}).
@@ -14,10 +14,10 @@
 -define(DB_ITEM_EXIST,			16#0002).
 -define(DB_REQ_PARAMETER_FAIL, 	16#0003).
 -define(DB_SYS_ERROR,			16#0004).
--define(DB_EMPTY,				16#0005).			
+-define(DB_EMPTY,				16#0005).	
 
 -record(db_user_new,{user}).
--record(db_user_info,{uid}).
+-record(db_user_info,{username}).
 -record(db_user_info_username,{username}).
 -record(db_user_update,{user}).
 

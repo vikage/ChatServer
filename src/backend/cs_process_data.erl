@@ -31,7 +31,7 @@ process_data(Bin,Socket,StateData) ->
 	gen_tcp:send(Socket, ResponseTCP).
 
 process(#cmd_login{username = UserName, password = Password}, _StateData) ->
-	case cs_user_db:user_info_username(UserName) of
+	case cs_user_db:user_info(UserName) of
 		#db_res{result = #tbl_users{password = Password}} ->
 			case cs_token_db:new_token(UserName) of
 				#db_res{result = Token} -> 

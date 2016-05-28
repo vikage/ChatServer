@@ -16,11 +16,11 @@
 %% ====================================================================
 
 create_db() ->
-	case catch mnesia:table_info(tbl_users, all) of
-		{'EXIT', _} ->		% If table not exists
-			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]},{index,[email]},{type,ordered_set},{attributes, record_info(fields, tbl_users)}]);
-		_ -> created
-	end,
+%% 	case catch mnesia:table_info(tbl_users, all) of
+%% 		{'EXIT', _} ->		% If table not exists
+%% 			{atomic, ok} = mnesia:create_table(tbl_users, [{disc_copies, [node()]},{index,[email]},{type,ordered_set},{attributes, record_info(fields, tbl_users)}]);
+%% 		_ -> created
+%% 	end,
 	case catch mnesia:table_info(tbl_token, all) of
 		{'EXIT', _} -> 
 			{atomic, ok} = mnesia:create_table(tbl_token, [{disc_copies, [node()]},{attributes, record_info(fields, tbl_token)}]);

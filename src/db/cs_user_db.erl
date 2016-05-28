@@ -10,7 +10,7 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0]).
--export([new_user/1,user_info/1,update_info/1,user_info_username/1]).
+-export([new_user/1,user_info/1,update_info/1,query_update_user/1]).
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -123,9 +123,7 @@ new_user(U) ->
 	NewU = U#tbl_users{create_date = Date},
 	call(#db_user_new{user = NewU}).
 user_info(Uid) ->
-	call(#db_user_info{uid = Uid}).
-user_info_username(UserName) ->
-	call(#db_user_info_username{username = UserName}).
+	call(#db_user_info{username = Uid}).
 update_info(U) ->
 	call(#db_user_update{user = U}).
 
@@ -142,32 +140,62 @@ process(#db_user_new{user = #tbl_users{username = undefined}}) ->
 process(#db_user_new{user = #tbl_users{password = undefined}}) ->
 	#db_res{error = ?DB_REQ_PARAMETER_FAIL};
 process(#db_user_new{user = U = #tbl_users{username = Username}}) ->
-	case cs_db:read(tbl_users, Username) of
-		[#tbl_users{}] -> #db_res{error = ?DB_ITEM_EXIST};
-		[] -> 
+	case query_username(Username) of
+		#tbl_users{} -> #db_res{error = ?DB_ITEM_EXIST};
+		not_found -> 
 			NewU = U#tbl_users{},
-			cs_db:write(tbl_users, NewU),
-			#db_res{result = NewU}
+			case query_new_user(NewU) of
+				ok -> #db_res{result = NewU};
+				{error, Reason} -> #db_res{reason = Reason}
+			end
 	end;
-process(#db_user_info{uid = Uid}) ->
-	case cs_db:read(tbl_users, Uid) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[User] -> #db_res{result = User};
+process(#db_user_info{username = Username}) ->
+	case query_username(Username) of
+		not_found -> #db_res{error = ?DB_NOT_FOUND};
+		User = #tbl_users{} -> #db_res{result = User};
 		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
 	end;
-process(#db_user_info_username{username = UserName}) ->
-	case cs_db:read(tbl_users, UserName) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[User] -> #db_res{result = User};
-		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
-	end;
-process(#db_user_update{user = U = #tbl_users{username = UserName}}) ->
-	case cs_db:read(tbl_users, UserName) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[CurrentU = #tbl_users{}] ->
+process(#db_user_update{user = U = #tbl_users{username = Username}}) ->
+	case query_username(Username) of
+		not_found -> #db_res{error = ?DB_NOT_FOUND};
+		CurrentU = #tbl_users{} ->
 			NewU = list_to_tuple(util:merge(tuple_to_list(CurrentU), tuple_to_list(U))),
-			cs_db:write(tbl_users, NewU),
-			#db_res{result = NewU}
+			case query_update_user(NewU) of
+				ok -> #db_res{result = NewU};
+				{error, Reason} ->
+					#db_res{reason = Reason, error = ?DB_SYS_ERROR}
+			end
 	end;
 process(Request) ->
 	{error, badmatch}.
+
+query_new_user(User) ->
+	case mysql:query(whereis(mysql), "INSERT INTO tbl_user VALUES(?,?,?,?,?,?)",
+							 [
+								User#tbl_users.username,
+								User#tbl_users.password,
+								User#tbl_users.fullname,
+								User#tbl_users.phone,
+								User#tbl_users.email,
+								User#tbl_users.create_date]) of
+				ok -> ok;
+				{error, Reason} -> {error,Reason}
+	end.
+
+query_update_user(User) ->
+	case mysql:query(whereis(mysql), "UPDATE tbl_user SET password = ?, fullname = ?, phone = ?, email = ? WHERE username = ?",
+					 [User#tbl_users.password,
+					  User#tbl_users.fullname,
+					  User#tbl_users.phone,
+					  User#tbl_users.email,
+					  User#tbl_users.username]) of
+		ok -> ok;
+		{error, Reason} -> {error, Reason}
+	end.
+
+query_username(UserName) ->
+	case mysql:query(whereis(mysql), "SELECT * FROM tbl_user WHERE username = ?",[UserName]) of
+	{ok, _Fields, _Rows = [U|_]} ->
+		list_to_tuple([tbl_users|U]);
+	_ -> not_found
+	end.
