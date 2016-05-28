@@ -21,8 +21,13 @@ add_client(UserName,Token,Pid) when is_pid(Pid) ->
 	cs_client:change_state_online(UserName, Token, Pid),
 	case find_client(UserName) of
 		{ok, #tbl_user_onl{pid = OldPid}} ->
-			lager:info("Kick username ~p~n", [UserName]),
-			OldPid ! {kill};
+			if
+				OldPid == Pid ->
+					ok;
+				true -> 
+					lager:info("Kick username ~p~n", [UserName]),
+					OldPid ! {kill}
+			end;
 		A -> lager:debug("Find user result ~p~n",[A])
 	end,
 	ets:insert(tbl_user_onl, #tbl_user_onl{username = UserName, pid = Pid}).

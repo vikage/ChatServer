@@ -1,7 +1,7 @@
 {application, cs,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "Erlang Chat server"},
+  {vsn, "1.0"},
   {registered, []},
   {applications, [
                   kernel,

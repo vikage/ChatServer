@@ -3,7 +3,8 @@
 -record(tbl_token,{token_string,username, create_date}).
 -record(tbl_user_onl,{username,pid}).
 -record(tbl_message,{message_id, message, from_user, to_user, datetime}).
-
+-record(tbl_friend,{friend_id, user1, user2, datetime}).
+-record(tbl_friend_request,{request_id, from_user, to_user, datetime}).
 
 -record(db_request, {name,data}).
 -record(db_res,{error = 0,reason,result}).
@@ -27,3 +28,7 @@
 -record(db_message_delete,{message_id}).
 -record(db_message_get,{message_id}).
 -record(db_message_get_message_of_user,{username}).
+
+-record(db_friend_add,{friend_obj}).
+-record(db_friend_remove, {friend_id}).
+-record(db_friend_get_list,{user_id}).

@@ -126,7 +126,7 @@ handle_info({tcp, Socket, Packet}, StateName, StateData) ->
 	%lager:debug("Client disconnected at ~p~n",[Socket]),
 	%cs_client_manager:remove_client(UserName, self()),
 	{stop, normal, StateData};
-	handle_info({kill}, _StateName, StateData = #state{socket = Socket}) ->
+handle_info({kill}, _StateName, StateData = #state{socket = Socket}) ->
 	A = <<"close">>,
 	Len = byte_size(A),
 	gen_tcp:send(Socket, <<Len:16,A/binary>>),

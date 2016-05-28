@@ -1,8 +1,8 @@
-%% @author thanhvu
-%% @doc @todo Add description to cs_user_db.
+%% @author ThanhVu
+%% @doc @todo Add description to cs_friend_db.
 
 
--module(cs_user_db).
+-module(cs_friend_db).
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -include("cs.hrl").
@@ -10,10 +10,10 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0]).
--export([new_user/1,user_info/1,update_info/1,user_info_username/1]).
+
+
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
@@ -114,60 +114,15 @@ terminate(Reason, State) ->
 code_change(OldVsn, State, Extra) ->
     {ok, State}.
 
-%% ====================================================================
-%% Interface
-%% ====================================================================
-
-new_user(U) ->
-	Date = util:get_current_date_time(),
-	NewU = U#tbl_users{create_date = Date},
-	call(#db_user_new{user = NewU}).
-user_info(Uid) ->
-	call(#db_user_info{uid = Uid}).
-user_info_username(UserName) ->
-	call(#db_user_info_username{username = UserName}).
-update_info(U) ->
-	call(#db_user_update{user = U}).
-
-
-call(Data) ->
-	Req = #db_request{data = Data},
-	gen_server:call(?MODULE, {db_query,Req}).
 
 %% ====================================================================
-%% DB Process
+%% Internal functions
 %% ====================================================================
-process(#db_user_new{user = #tbl_users{username = undefined}}) ->
-	#db_res{error = ?DB_REQ_PARAMETER_FAIL};
-process(#db_user_new{user = #tbl_users{password = undefined}}) ->
-	#db_res{error = ?DB_REQ_PARAMETER_FAIL};
-process(#db_user_new{user = U = #tbl_users{username = Username}}) ->
-	case cs_db:read(tbl_users, Username) of
-		[#tbl_users{}] -> #db_res{error = ?DB_ITEM_EXIST};
-		[] -> 
-			NewU = U#tbl_users{},
-			cs_db:write(tbl_users, NewU),
-			#db_res{result = NewU}
+process(#db_friend_add{friend_obj = FO}) ->
+	case cs_db:write(tbl_friend, FO) of
+		{error, Reason} -> {error, Reason};
+		ok -> #db_res{}
 	end;
-process(#db_user_info{uid = Uid}) ->
-	case cs_db:read(tbl_users, Uid) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[User] -> #db_res{result = User};
-		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
-	end;
-process(#db_user_info_username{username = UserName}) ->
-	case cs_db:read(tbl_users, UserName) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[User] -> #db_res{result = User};
-		{error,Reason} -> #db_res{reason = Reason, error = ?DB_SYS_ERROR}
-	end;
-process(#db_user_update{user = U = #tbl_users{username = UserName}}) ->
-	case cs_db:read(tbl_users, UserName) of
-		[] -> #db_res{error = ?DB_NOT_FOUND};
-		[CurrentU = #tbl_users{}] ->
-			NewU = list_to_tuple(util:merge(tuple_to_list(CurrentU), tuple_to_list(U))),
-			cs_db:write(tbl_users, NewU),
-			#db_res{result = NewU}
-	end;
-process(Request) ->
+process(_Request) ->
 	{error, badmatch}.
+
