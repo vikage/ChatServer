@@ -56,6 +56,9 @@ encode_data(#res_message_offline{list_message = ListMessage}) ->
 						  {<<"message_id">>, MessageId},
 						  {<<"datetime">>, DateTime}] | R]
 				end, [], ListMessage);
+encode_data(#res_received_friend_request{request_id = RId,
+										 from_user = FromUser}) ->
+	[{<<"request_id">>, RId},{<<"from_user">>, FromUser}];
 encode_data(_) ->
 	[].
 

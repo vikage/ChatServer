@@ -1,16 +1,17 @@
 %% @author ThanhVu
-%% @doc @todo Add description to cs_friend_db.
+%% @doc @todo Add description to cs_friend_request_db.
 
 
--module(cs_friend_db).
+-module(cs_friend_request_db).
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -include("cs.hrl").
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0,query_insert/1,new_friend/1,unfriend/2]).
--export([query_get/1]).
+-export([start_link/0]).
+-export([query_insert/1,query_get/1,query_delete/1]).
+-export([new_request/1, remove_request/1]).
 
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -114,13 +115,12 @@ terminate(Reason, State) ->
 code_change(OldVsn, State, Extra) ->
     {ok, State}.
 
+new_request(FRO) ->
+	NFRO = FRO#tbl_friend_request{datetime = util:get_current_date_time()},
+	call(#db_friend_request_add{request = NFRO}).
 
-new_friend(FO) ->
-	NFO = FO#tbl_friend{datetime = util:get_current_date_time()},
-	call(#db_friend_add{friend_obj = NFO}).
-	
-unfriend(User1,User2) ->
-	call(#db_friend_remove{user1 = User1, user2 = User2}).
+remove_request(RId) ->
+	call(#db_friend_request_remove{request_id = RId}).
 
 call(Data) ->
 	Req = #db_request{data = Data},
@@ -129,45 +129,44 @@ call(Data) ->
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
-process(#db_friend_add{friend_obj = FO = #tbl_friend{friend_id = FId}}) ->
-	case query_get(FId) of
-		#tbl_friend{} -> #db_res{error = ?DB_ITEM_EXIST, reason = <<"Already friend">>};
+
+process(#db_friend_request_add{request = FRO = #tbl_friend_request{request_id = RId}}) ->
+	case query_get(RId) of
+		#tbl_friend_request{} -> #db_res{error = ?DB_ITEM_EXIST, reason = <<"Already request">>};
 		not_found ->
-			case query_insert(FO) of
-				ok -> #db_res{result = FO};
+			case query_insert(FRO) of
+				ok -> #db_res{result = FRO};
 				{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
 			end
 	end;
-process(#db_friend_remove{user1 = User1, user2 = User2}) ->
-	case query_delete(User1,User2) of
+process(#db_friend_request_remove{request_id = RId}) ->
+	case query_delete(RId) of
 		ok -> #db_res{};
 		{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
 	end;
 process(_Request) ->
 	{error, badmatch}.
 
-query_get(FriendId) ->
-	case mysql:query(whereis(mysql), "SELECT * FROM tbl_friend WHERE friend_id = ?",[FriendId]) of
-	{ok, _Fields, _Rows = [FO|_]} ->
-		list_to_tuple([tbl_friend|FO]);
-	_ -> not_found
-	end.
-
-query_insert(FO) ->
-	case mysql:query(whereis(mysql), "INSERT INTO tbl_friend VALUES(?,?,?,?)",[FO#tbl_friend.friend_id,
-																		  FO#tbl_friend.user1,
-																		  FO#tbl_friend.user2,
-																		  FO#tbl_friend.datetime]) of
+query_insert(FRO) ->
+	case mysql:query(whereis(mysql), "INSERT INTO tbl_friend_request VALUES(?,?,?,?)",
+					 [FRO#tbl_friend_request.request_id,
+					  FRO#tbl_friend_request.from_user,
+					  FRO#tbl_friend_request.to_user,
+					  FRO#tbl_friend_request.datetime]) of
 		ok -> ok;
 		{error, Reason} -> {error, Reason};
 		Error -> {error, Error}
 	end.
 
-query_delete(User1,User2) ->
-	Id1 = <<User1/binary,<<",">>/binary, User2/binary>>,
-	Id2 = <<User2/binary,<<",">>/binary, User1/binary>>,
-%% 	io:format("Id1: ~p, ID2: ~p~n",[Id1,Id2]),
-	case mysql:query(whereis(mysql), "DELETE FROM tbl_friend WHERE friend_id = ? OR friend_id = ?",[Id1,Id2]) of
+query_get(RequestId) ->
+	case mysql:query(whereis(mysql), "SELECT * FROM tbl_friend_request WHERE request_id = ?",[RequestId]) of
+	{ok, _Fields, _Rows = [FO|_]} ->
+		list_to_tuple([tbl_friend_request|FO]);
+	_ -> not_found
+	end.
+
+query_delete(RId) ->
+	case mysql:query(whereis(mysql), "DELETE FROM tbl_friend_request WHERE request_id = ?",[RId]) of
 		ok -> ok;
 		{error, Reason} -> {error, Reason};
 		Error -> {error, Error}

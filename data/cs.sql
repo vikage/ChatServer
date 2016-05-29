@@ -11,4 +11,9 @@ CREATE TABLE tbl_user (
 	create_date varchar(20)
 );
 
-SELECT * FROM tbl_user
+CREATE TABLE tbl_friend (
+	friend_id varchar(30) PRIMARY KEY,
+	user1 VARCHAR(30) NOT NULL,
+	user2 NVARCHAR(30) NOT NULL,
+	create_date varchar(20)
+);

@@ -30,5 +30,8 @@
 -record(db_message_get_message_of_user,{username}).
 
 -record(db_friend_add,{friend_obj}).
--record(db_friend_remove, {friend_id}).
+-record(db_friend_remove, {user1,user2}).
 -record(db_friend_get_list,{user_id}).
+
+-record(db_friend_request_add,{request}).
+-record(db_friend_request_remove, {request_id}).

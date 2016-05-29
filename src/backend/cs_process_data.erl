@@ -100,7 +100,7 @@ process(#cmd_confirm_received_message{message_id = MessageId, token = Token}, St
 		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
 						  case cs_message_db:get_message(MessageId) of
 							  #db_res{result = #tbl_message{to_user = UserName}} ->								  
-								   case cs_message_db:delete_message(MessageId) of
+								  case cs_message_db:delete_message(MessageId) of
 									  #db_res{error = ?DB_DONE} ->
 										  {?API_DONE, #res_confirm_received_message{}};
 									  _ -> {?API_SYSTEM_FAIL, #res_confirm_received_message{}}
@@ -118,6 +118,36 @@ process(#cmd_confirm_received_offline_message{token = Token}, StateData) ->
 								  [cs_message_db:delete_message(MessageId) || #tbl_message{message_id = MessageId} <- ListMessage],
 								  {?API_DONE, undefined};
 							  _ -> {?API_DONE, undefined}
+						  end
+	end;
+process(#cmd_add_friend{token = Token, to_user = ToUser}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						  Req = #tbl_friend_request{request_id = <<UserName/binary,<<",">>/binary,ToUser/binary>>, from_user = UserName, to_user = ToUser},
+						  case cs_friend_request_db:new_request(Req) of
+							  #db_res{error = ?DB_DONE} -> 
+								  % Send req to user
+								  case cs_client_manager:find_client(ToUser) of
+									  {error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUser,Reason]);
+									  {ok, #tbl_user_onl{pid = U_Pid}} ->
+										  lager:info("Detect user ~p at Pid: ~p~n", [ToUser, U_Pid]),
+										  DataRev = #res_received_friend_request{request_id = <<UserName/binary,<<",">>/binary,ToUser/binary>>,
+																				 from_user = UserName},
+										  ResponseReceivedMessage = #response{group = ?GROUP_FRIEND,
+																			  type = ?TYPE_RECEIVED_FRIEND_REQUEST,
+																			  req_id = 0,
+																			  result = 0,
+																			  data = DataRev},
+										  ResponseBin = cs_encode:encode(ResponseReceivedMessage),	
+										  Len = byte_size(ResponseBin),
+										  cs_client:received_data(U_Pid, <<Len:16,ResponseBin/binary>>)
+								  end,
+								  {?API_DONE, undefined};
+							  #db_res{error = ?DB_ITEM_EXIST} ->
+								  {?API_ADD_FIEND_EXIST, undefined};
+							  _ -> {?API_SYSTEM_FAIL, undefined}
 						  end
 	end;
 process(_Req, _StateData) ->

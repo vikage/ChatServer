@@ -53,5 +53,9 @@ decode_data(?GROUP_CHAT, ?TYPE_CONFIRM_RECEIVED_MESSAGE, Data) ->
 decode_data(?GROUP_CHAT, ?TYPE_CONFIRM_RECEIVED_OFFLINE_MESSAGE, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	#cmd_confirm_received_offline_message{token = Token};
+decode_data(?GROUP_FRIEND, ?TYPE_ADD_FRIEND, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	ToUser = maps:get(<<"to_user">>, Data),
+	#cmd_add_friend{token = Token, to_user = ToUser};
 decode_data(_Group, _Type, _Data) ->
 	undefined.
