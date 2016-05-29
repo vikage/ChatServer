@@ -146,7 +146,7 @@ process(#db_user_new{user = U = #tbl_users{username = Username}}) ->
 			NewU = U#tbl_users{},
 			case query_new_user(NewU) of
 				ok -> #db_res{result = NewU};
-				{error, Reason} -> #db_res{reason = Reason}
+				{error, Reason} -> #db_res{reason = Reason, error = ?DB_QUERY_ERROR}
 			end
 	end;
 process(#db_user_info{username = Username}) ->
@@ -170,13 +170,14 @@ process(Request) ->
 	{error, badmatch}.
 
 query_new_user(User) ->
-	case mysql:query(whereis(mysql), "INSERT INTO tbl_user VALUES(?,?,?,?,?,?)",
+	case mysql:query(whereis(mysql), "INSERT INTO tbl_user VALUES(?,?,?,?,?,?,?)",
 							 [
 								User#tbl_users.username,
 								User#tbl_users.password,
 								User#tbl_users.fullname,
 								User#tbl_users.phone,
 								User#tbl_users.email,
+								User#tbl_users.avatar,
 								User#tbl_users.create_date]) of
 				ok -> ok;
 				{error, Reason} -> {error,Reason}

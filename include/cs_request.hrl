@@ -1,5 +1,6 @@
 -record(request,{group, type, req_id, data}).
 -record(cmd_login,{username,password}).
+-record(cmd_register,{username, password, email, phone, fullname}).
 -record(cmd_user_info,{username}).
 -record(cmd_user_auth,{token}).
 -record(cmd_send_message,{token, to_user_name, message}).
@@ -17,6 +18,7 @@
 -define(GROUP_NOTIFICATION,<<"notification">>).
 
 -define(TYPE_LOGIN,<<"login">>).
+-define(TYPE_REGISTER,<<"register">>).
 -define(TYPE_USER_INFO,<<"user_info">>).
 -define(TYPE_USER_AUTH,<<"user_auth">>).
 -define(TYPE_SEND_MESSAGE,<<"send_message">>).

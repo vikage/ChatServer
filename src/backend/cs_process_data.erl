@@ -42,6 +42,32 @@ process(#cmd_login{username = UserName, password = Password}, _StateData) ->
 			end;
 		_ -> {?API_USER_LOGIN_FAIL, undefined}
 	end;
+process(#cmd_register{username = Username,
+				  password = Password,
+				  fullname = FullName,
+				  email = Email,
+				  phone = Phone}, _StateData) ->
+	case cs_user_db:user_info(Username) of
+		#db_res{result = #tbl_users{}} ->
+			{?API_USER_EXIST, undefined};
+		#db_res{error = ?DB_NOT_FOUND} ->
+			U = #tbl_users{username = Username,
+				  password = Password,
+				  fullname = FullName,
+				  email = Email,
+				  phone = Phone},
+			case cs_user_db:new_user(U) of
+				#db_res{error = ?DB_DONE} ->
+					case cs_token_db:new_token(Username) of
+						#db_res{result = Token} -> 
+							% add new client
+							cs_client_manager:add_client(Username,Token#tbl_token.token_string, self()),
+							{?API_DONE, #res_login{token = Token#tbl_token.token_string}};
+						_ -> {?API_SYSTEM_FAIL, undefined}
+					end;
+				_ -> {?API_SYSTEM_FAIL, undefined}
+			end
+	end;
 process(#cmd_user_info{username = UserName}, _StateData) ->
 	case cs_user_db:user_info_username(UserName) of
 		#db_res{result = #tbl_users{username = UserName,

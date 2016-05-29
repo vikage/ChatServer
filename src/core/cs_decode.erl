@@ -35,6 +35,17 @@ decode_data(?GROUP_USER, ?TYPE_LOGIN, Data) ->
 	Username = maps:get(<<"username">>, Data),
 	Password = maps:get(<<"password">>, Data),
 	#cmd_login{username = Username, password = Password};
+decode_data(?GROUP_USER, ?TYPE_REGISTER, Data) ->
+	Username = maps:get(<<"username">>, Data),
+	Password = maps:get(<<"password">>, Data),
+	FullName = maps:get(<<"fullname">>, Data),
+	Email = maps:get(<<"phone">>, Data),
+	Phone = maps:get(<<"email">>, Data),
+	#cmd_register{username = Username,
+				  password = Password,
+				  fullname = FullName,
+				  email = Email,
+				  phone = Phone}; 
 decode_data(?GROUP_USER, ?TYPE_USER_INFO, Data) ->
 	UserName = maps:get(<<"username">>, Data),
 	#cmd_user_info{username = UserName};

@@ -14,7 +14,8 @@
 -define(DB_ITEM_EXIST,			16#0002).
 -define(DB_REQ_PARAMETER_FAIL, 	16#0003).
 -define(DB_SYS_ERROR,			16#0004).
--define(DB_EMPTY,				16#0005).	
+-define(DB_EMPTY,				16#0005).
+-define(DB_QUERY_ERROR,				16#0005).
 
 -record(db_user_new,{user}).
 -record(db_user_info,{username}).

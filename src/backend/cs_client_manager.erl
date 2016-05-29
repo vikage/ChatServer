@@ -28,7 +28,7 @@ add_client(UserName,Token,Pid) when is_pid(Pid) ->
 					lager:info("Kick username ~p~n", [UserName]),
 					OldPid ! {kill}
 			end;
-		A -> lager:debug("Find user result ~p~n",[A])
+		A -> lager:debug("Find user kick result ~p~n",[A])
 	end,
 	ets:insert(tbl_user_onl, #tbl_user_onl{username = UserName, pid = Pid}).
 
