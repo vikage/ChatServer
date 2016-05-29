@@ -1,4 +1,4 @@
--record(tbl_users,{username,password,fullname = <<"">>,phone = <<"">>,email = <<"">>, create_date}).
+-record(tbl_users,{username,password,fullname = <<"">>,phone = <<"">>,email = <<"">>,avatar = <<"">>, create_date}).
 -record(tbl_config,{key,val}).
 -record(tbl_token,{token_string,username, create_date}).
 -record(tbl_user_onl,{username,pid}).
@@ -32,7 +32,7 @@
 -record(db_friend_add,{friend_obj}).
 -record(db_friend_remove, {user1,user2}).
 -record(db_friend_get, {user1,user2}).
--record(db_friend_get_list,{user_id}).
+-record(db_friend_get_list,{username, page}).
 
 -record(db_friend_request_add,{request}).
 -record(db_friend_request_remove, {request_id}).

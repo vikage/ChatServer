@@ -61,6 +61,8 @@ encode_data(#res_received_friend_request{request_id = RId,
 	[{<<"request_id">>, RId},{<<"from_user">>, FromUser}];
 encode_data(#res_send_notification{title = Title, body = Body}) ->
 	[{<<"body">>, Body}, {<<"title">>, Title}];
+encode_data(#res_list_friend{list_encoded = List}) ->
+	List;
 encode_data(_) ->
 	[].
 

@@ -120,6 +120,13 @@ process(#cmd_accept_friend_request{token = Token, from_user = From}, StateData) 
 						  RId = <<From/binary,<<",">>/binary, UserName/binary>>,
 						  cs_process_friend:accept_friend_request(UserName, RId, From)
 	end;
+process(#cmd_get_list_friend{token = Token, page = Page}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						  cs_process_friend:get_list_friend(UserName, Page)
+	end;
 process(_Req, _StateData) ->
 	{?API_BAD_MATCH,undefied}.
 

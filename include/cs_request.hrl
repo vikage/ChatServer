@@ -9,6 +9,7 @@
 -record(cmd_add_friend, {token, to_user}).
 -record(cmd_accept_friend_request,{token, from_user}).
 -record(cmd_reject_friend_request,{token, from_user}).
+-record(cmd_get_list_friend,{token, page}).
 
 -define(GROUP_USER,<<"user">>).
 -define(GROUP_CHAT,<<"chat">>).
@@ -28,4 +29,5 @@
 -define(TYPE_ACCEPT_FRIEND_REQUEST,<<"accept_friend_request">>).
 -define(TYPE_REJECT_FRIEND_REQUEST,<<"reject_friend_request">>).
 -define(TYPE_SEND_NOTIFICATION,<<"send_notification">>).
+-define(TYPE_GET_LIST_FRIEND,<<"get_list_friend">>).
 

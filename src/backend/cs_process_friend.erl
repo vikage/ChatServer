@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([accept_friend_request/3,add_request_friend/2]).
+-export([accept_friend_request/3,add_request_friend/2,get_list_friend/2]).
 
 
 
@@ -35,10 +35,10 @@ accept_friend_request(OurName, RId, From) ->
 							DataRev = #res_send_notification{title = <<"FRIEND ACCEPT">>,
 															 body = Body},
 							ResponseRecord = #response{group = ?GROUP_NOTIFICATION,
-																type = ?TYPE_SEND_NOTIFICATION,
-																req_id = 0,
-																result = 0,
-																data = DataRev},
+													   type = ?TYPE_SEND_NOTIFICATION,
+													   req_id = 0,
+													   result = 0,
+													   data = DataRev},
 							cs_client:send_data_res(U_Pid, ResponseRecord)
 					end,
 					{?API_DONE, undefined};
@@ -66,10 +66,10 @@ add_request_friend(OurName, ToUser) ->
 							DataRev = #res_received_friend_request{request_id = <<OurName/binary,<<",">>/binary,ToUser/binary>>,
 																   from_user = OurName},
 							ResponseRecord = #response{group = ?GROUP_FRIEND,
-																type = ?TYPE_RECEIVED_FRIEND_REQUEST,
-																req_id = 0,
-																result = 0,
-																data = DataRev},
+													   type = ?TYPE_RECEIVED_FRIEND_REQUEST,
+													   req_id = 0,
+													   result = 0,
+													   data = DataRev},
 							cs_client:send_data_res(U_Pid, ResponseRecord)
 					end,
 					{?API_DONE, undefined};
@@ -77,4 +77,29 @@ add_request_friend(OurName, ToUser) ->
 					{?API_FRIEND_REQUEST_EXIST, undefined};
 				_ -> {?API_SYSTEM_FAIL, undefined}
 			end
+	end.
+
+
+get_list_friend(OurName, Page) ->
+	case cs_friend_db:get_list_friend(OurName, Page) of
+		#db_res{error = ?DB_EMPTY} ->
+			{?API_EMPTY, undefined};
+		#db_res{error = ?DB_DONE, result = List} ->
+			Fun = fun(Hd, Accu) ->
+						  #mysql_friend_item{user1 = U1, user2 = U2, avatar = Avatar} = Hd,
+						  FriendName = case U1 of
+										   OurName -> U2;
+										   _ -> U1
+									   end,
+						  % Check user F online
+						  Result = case cs_client_manager:find_client(FriendName) of
+									   {ok, #tbl_user_onl{}} ->
+										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,1}];
+									   _ ->
+										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,0}]
+								   end,
+						  [Result|Accu]
+				  end,
+			ListF = lists:foldl(Fun, [], List),
+			{?API_DONE, #res_list_friend{list_encoded = ListF}}
 	end.
