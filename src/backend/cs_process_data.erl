@@ -68,30 +68,7 @@ process(#cmd_send_message{token = Token, message = Message, to_user_name = ToUse
 		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
 						  %Save message
 						  MessageObj = #tbl_message{to_user = ToUserName, from_user = UserName, message = Message},
-						  case cs_message_db:new_message(MessageObj) of
-							  #db_res{result = #tbl_message{message_id = MessageId, datetime = DateTime}} ->
-								  % Find user from cs_client_manager
-								  case cs_client_manager:find_client(ToUserName) of
-									  {error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUserName,Reason]);
-									  {ok, #tbl_user_onl{pid = U_Pid}} ->
-										  lager:info("Detect user ~p at Pid: ~p~n", [ToUserName, U_Pid]),
-										  DataRev = #res_received_message{from_user_name = UserName,
-																		  message = Message,
-																		  message_id = MessageId,
-																		  datetime = DateTime},
-										  ResponseReceivedMessage = #response{group = ?GROUP_CHAT,
-																			  type = ?TYPE_RECEIVED_MESSAGE,
-																			  req_id = 0,
-																			  result = 0,
-																			  data = DataRev},
-										  ResponseBin = cs_encode:encode(ResponseReceivedMessage),	
-										  Len = byte_size(ResponseBin),
-										  cs_client:received_message(U_Pid, <<Len:16,ResponseBin/binary>>)
-								  
-								  end,
-								  {?API_DONE, #res_send_message{time = DateTime}};
-							  _ -> {?API_SYSTEM_FAIL, undefined}
-						  end
+						  cs_process_message:send_message(MessageObj)
 	end;
 process(#cmd_confirm_received_message{message_id = MessageId, token = Token}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
@@ -125,32 +102,25 @@ process(#cmd_add_friend{token = Token, to_user = ToUser}, StateData) ->
 		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
 						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
 		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
-						  Req = #tbl_friend_request{request_id = <<UserName/binary,<<",">>/binary,ToUser/binary>>, from_user = UserName, to_user = ToUser},
-						  case cs_friend_request_db:new_request(Req) of
-							  #db_res{error = ?DB_DONE} -> 
-								  % Send req to user
-								  case cs_client_manager:find_client(ToUser) of
-									  {error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUser,Reason]);
-									  {ok, #tbl_user_onl{pid = U_Pid}} ->
-										  lager:info("Detect user ~p at Pid: ~p~n", [ToUser, U_Pid]),
-										  DataRev = #res_received_friend_request{request_id = <<UserName/binary,<<",">>/binary,ToUser/binary>>,
-																				 from_user = UserName},
-										  ResponseReceivedMessage = #response{group = ?GROUP_FRIEND,
-																			  type = ?TYPE_RECEIVED_FRIEND_REQUEST,
-																			  req_id = 0,
-																			  result = 0,
-																			  data = DataRev},
-										  ResponseBin = cs_encode:encode(ResponseReceivedMessage),	
-										  Len = byte_size(ResponseBin),
-										  cs_client:received_data(U_Pid, <<Len:16,ResponseBin/binary>>)
-								  end,
-								  {?API_DONE, undefined};
-							  #db_res{error = ?DB_ITEM_EXIST} ->
-								  {?API_ADD_FIEND_EXIST, undefined};
-							  _ -> {?API_SYSTEM_FAIL, undefined}
-						  end
+						  cs_process_friend:add_request_friend(UserName, ToUser)
+	end;
+process(#cmd_reject_friend_request{token = Token, from_user = FromUser}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						   cs_friend_request_db:remove_request(<<FromUser/binary,<<",">>/binary, UserName/binary>>),
+						   {?API_DONE, undefined}
+	end;
+process(#cmd_accept_friend_request{token = Token, from_user = From}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+						  {?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName} -> lager:info("Check token success with Token: ~p~n",[Token]),
+						  RId = <<From/binary,<<",">>/binary, UserName/binary>>,
+						  cs_process_friend:accept_friend_request(UserName, RId, From)
 	end;
 process(_Req, _StateData) ->
-	undefied.
+	{?API_BAD_MATCH,undefied}.
 
 

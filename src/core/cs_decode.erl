@@ -57,5 +57,13 @@ decode_data(?GROUP_FRIEND, ?TYPE_ADD_FRIEND, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	ToUser = maps:get(<<"to_user">>, Data),
 	#cmd_add_friend{token = Token, to_user = ToUser};
+decode_data(?GROUP_FRIEND, ?TYPE_ACCEPT_FRIEND_REQUEST, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	FromUser = maps:get(<<"from_user">>, Data),
+	#cmd_accept_friend_request{token = Token, from_user = FromUser};
+decode_data(?GROUP_FRIEND, ?TYPE_REJECT_FRIEND_REQUEST, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	FromUser = maps:get(<<"from_user">>, Data),
+	#cmd_reject_friend_request{token = Token, from_user = FromUser};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

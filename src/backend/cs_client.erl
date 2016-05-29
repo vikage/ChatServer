@@ -11,7 +11,7 @@
 %% ====================================================================
 -export([start_link/0,set_socket/2,received_data/2]).
 -export([wait_for_socket/2,wait_for_auth/2,wait_for_data/2,change_state_online/3,auth/2,check_token/2,received_message/2]).
--export([received_friend_request/2]).
+-export([received_friend_request/2,send_data_res/2]).
 
 start_link() ->
 	gen_fsm:start_link(?MODULE, [], []).
@@ -66,6 +66,9 @@ received_friend_request(Pid, Binary) ->
 
 received_data(Pid, Binary) ->
 	gen_fsm:send_event(Pid, {received_data, Binary}).
+
+send_data_res(Pid, Obj) ->
+	gen_fsm:send_event(Pid, {send_data, Obj}).
 %% init/1
 %% ====================================================================
 %% @doc <a href="http://www.erlang.org/doc/man/gen_fsm.html#Module:init-1">gen_fsm:init/1</a>
@@ -103,6 +106,11 @@ wait_for_data({received_friend_request, Binary}, StateData = #state{socket = Soc
 	{next_state, wait_for_data, StateData};
 wait_for_data({received_data, Binary}, StateData = #state{socket = Socket}) ->
 	gen_tcp:send(Socket, Binary),
+	{next_state, wait_for_data, StateData};
+wait_for_data({send_data, Obj}, StateData = #state{socket = Socket}) ->
+	ResponseBin = cs_encode:encode(Obj),	
+	Len = byte_size(ResponseBin),
+	gen_tcp:send(Socket, <<Len:16,ResponseBin/binary>>),
 	{next_state, wait_for_data, StateData};
 wait_for_data(_Event, StateData) ->
 	{next_state, wait_for_data, StateData}.

@@ -31,7 +31,9 @@
 
 -record(db_friend_add,{friend_obj}).
 -record(db_friend_remove, {user1,user2}).
+-record(db_friend_get, {user1,user2}).
 -record(db_friend_get_list,{user_id}).
 
 -record(db_friend_request_add,{request}).
 -record(db_friend_request_remove, {request_id}).
+-record(db_friend_request_get, {request_id}).

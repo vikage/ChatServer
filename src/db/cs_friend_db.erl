@@ -9,7 +9,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0,query_insert/1,new_friend/1,unfriend/2]).
+-export([start_link/0,query_insert/1,new_friend/1,unfriend/2,get/2]).
 -export([query_get/1]).
 
 start_link() ->
@@ -122,6 +122,9 @@ new_friend(FO) ->
 unfriend(User1,User2) ->
 	call(#db_friend_remove{user1 = User1, user2 = User2}).
 
+get(User1,User2) ->
+	call(#db_friend_get{user1 = User1, user2 = User2}).
+  
 call(Data) ->
 	Req = #db_request{data = Data},
 	gen_server:call(?MODULE, {db_query,Req}).
@@ -143,11 +146,26 @@ process(#db_friend_remove{user1 = User1, user2 = User2}) ->
 		ok -> #db_res{};
 		{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
 	end;
+process(#db_friend_get{user1 = User1, user2 = User2}) ->
+	case query_get2(User1, User2) of
+		F = #tbl_friend{} -> #db_res{result = F};
+		not_found ->
+			#db_res{error = ?DB_NOT_FOUND}
+	end;
 process(_Request) ->
 	{error, badmatch}.
 
 query_get(FriendId) ->
 	case mysql:query(whereis(mysql), "SELECT * FROM tbl_friend WHERE friend_id = ?",[FriendId]) of
+	{ok, _Fields, _Rows = [FO|_]} ->
+		list_to_tuple([tbl_friend|FO]);
+	_ -> not_found
+	end.
+
+query_get2(User1,User2) ->
+	Id1 = <<User1/binary,<<",">>/binary, User2/binary>>,
+	Id2 = <<User2/binary,<<",">>/binary, User1/binary>>,
+	case mysql:query(whereis(mysql), "SELECT * FROM tbl_friend WHERE friend_id = ? OR friend_id = ?",[Id1,Id2]) of
 	{ok, _Fields, _Rows = [FO|_]} ->
 		list_to_tuple([tbl_friend|FO]);
 	_ -> not_found

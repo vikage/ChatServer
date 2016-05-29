@@ -11,7 +11,7 @@
 %% ====================================================================
 -export([start_link/0]).
 -export([query_insert/1,query_get/1,query_delete/1]).
--export([new_request/1, remove_request/1]).
+-export([new_request/1, remove_request/1,get_request/1]).
 
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -122,6 +122,9 @@ new_request(FRO) ->
 remove_request(RId) ->
 	call(#db_friend_request_remove{request_id = RId}).
 
+get_request(RId) ->
+	call(#db_friend_request_get{request_id = RId}).
+
 call(Data) ->
 	Req = #db_request{data = Data},
 	gen_server:call(?MODULE, {db_query,Req}).
@@ -143,6 +146,13 @@ process(#db_friend_request_remove{request_id = RId}) ->
 	case query_delete(RId) of
 		ok -> #db_res{};
 		{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
+	end;
+process(#db_friend_request_get{request_id = RId}) ->
+	case query_get(RId) of
+		FRO = #tbl_friend_request{} ->
+			#db_res{result = FRO};
+		not_found ->
+			#db_res{error = ?DB_NOT_FOUND, reason = <<"NOT FOUND REQUEST FRIEND">>}
 	end;
 process(_Request) ->
 	{error, badmatch}.
