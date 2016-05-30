@@ -9,7 +9,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0,query_insert/1,new_friend/1,unfriend/2,get/2,get_list_friend/2]).
+-export([start_link/0,query_insert/1,new_friend/1,unfriend/2,get/2,get_list_friend/2,get_list_friend_all/1]).
 -export([query_get/1]).
 
 start_link() ->
@@ -129,6 +129,9 @@ get(User1,User2) ->
 get_list_friend(UserName, Page) ->
 	call(#db_friend_get_list{username = UserName, page = Page}).
 
+get_list_friend_all(UserName) ->
+	call(#db_friend_get_all_friend{username = UserName}).
+
 call(Data) ->
 	Req = #db_request{data = Data},
 	gen_server:call(?MODULE, {db_query,Req}).
@@ -158,6 +161,12 @@ process(#db_friend_get{user1 = User1, user2 = User2}) ->
 	end;
 process(#db_friend_get_list{username = UserName, page = Page}) ->
 	case query_get_list_friend(UserName, Page) of
+		not_found -> #db_res{error = ?DB_EMPTY};
+		List = [_|_] ->
+			#db_res{result = List}
+	end;
+process(#db_friend_get_all_friend{username = UserName}) ->
+	case query_get_all_friend(UserName) of
 		not_found -> #db_res{error = ?DB_EMPTY};
 		List = [_|_] ->
 			#db_res{result = List}
@@ -203,11 +212,22 @@ query_delete(User1,User2) ->
 
 query_get_list_friend(UserName, Page) ->
 	Limit = 20 * (Page - 1),
-	case mysql:query(whereis(mysql), "SELECT user1,user2,avatar FROM (SELECT friend_id,user1,user2,avatar FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
+	case mysql:query(whereis(mysql), "SELECT user1,user2,avatar,fullname FROM (SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
 										WHERE user2 = ?
 										UNION
-										SELECT friend_id,user1,user2,avatar FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
+										SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
 										WHERE user1 = ?) AS U LIMIT ?,20",[UserName,UserName, Limit]) of
+	{ok, _Fields, Rows = [_|_]} ->
+		[list_to_tuple([mysql_friend_item|R]) || R <- Rows];
+	_ -> not_found
+	end.
+
+query_get_all_friend(UserName) ->
+	case mysql:query(whereis(mysql), "SELECT user1,user2,avatar,fullname FROM (SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
+										WHERE user2 = ?
+										UNION
+										SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
+										WHERE user1 = ?) AS U",[UserName,UserName]) of
 	{ok, _Fields, Rows = [_|_]} ->
 		[list_to_tuple([mysql_friend_item|R]) || R <- Rows];
 	_ -> not_found

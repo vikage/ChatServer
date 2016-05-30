@@ -10,7 +10,7 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0,set_socket/2,received_data/2]).
--export([wait_for_socket/2,wait_for_auth/2,wait_for_data/2,change_state_online/3,auth/2,check_token/2,received_message/2]).
+-export([wait_for_socket/2,wait_for_auth/2,wait_for_data/2,change_state_online/4,auth/2,check_token/2,received_message/2]).
 -export([received_friend_request/2,send_data_res/2]).
 
 start_link() ->
@@ -18,15 +18,15 @@ start_link() ->
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {socket,username,token}).
+-record(state, {socket,username,token, fullname}).
 -include("cs.hrl").
 
 set_socket(Socket, Pid) when is_pid(Pid), is_port(Socket) ->
 	gen_fsm:send_event(Pid, {socket_ready, Socket}).
 
-change_state_online(UserName,Token,Pid) when is_pid(Pid) ->
+change_state_online(UserName,FullName,Token,Pid) when is_pid(Pid) ->
 	%Pid ! {change_state_online,UserName,Token}.
-	gen_fsm:send_event(Pid, {auth_success, UserName, Token}).
+	gen_fsm:send_event(Pid, {auth_success, UserName,FullName, Token}).
 
 % check token expire after 60day
 check_token_expire(_Token = #tbl_token{create_date = CreateDate}) ->
@@ -44,17 +44,21 @@ auth(TokenString,Pid) ->
 			case check_token_expire(Token) of
 				true -> {error, token_expire};
 				_ -> 
-					cs_client_manager:add_client(UserName, TokenString, Pid),
-					ok
+					case cs_user_db:user_info(UserName) of
+						#db_res{error = ?DB_DONE, result = #tbl_users{fullname = FullName}} ->
+							cs_client_manager:add_client(UserName,FullName, TokenString, Pid),
+							ok;
+						_ -> ok
+					end
 			end;
 		_ -> {error, token_not_exist}
 	end.
 
 check_token(TokenString, StateData) ->
-	#state{token = Token, username = UserName} = StateData,
+	#state{token = Token, username = UserName, fullname = FullName} = StateData,
 	if
 		Token == TokenString ->
-			{ok, UserName};
+			{ok, UserName, FullName};
 		true -> {error, token_fail}
 	end.
 
@@ -119,8 +123,8 @@ wait_for_data(_Event, StateData) ->
 wait_for_auth({data, Packet}, #state{socket = Socket} = StateData) ->
 	cs_process_data:process_data(Packet, Socket,StateData),
 	{next_state, wait_for_auth, StateData};
-wait_for_auth({auth_success, UserName, Token}, StateData = #state{socket = Socket}) ->
-	NewState = StateData#state{username = UserName, token = Token},
+wait_for_auth({auth_success, UserName,FullName, Token}, StateData = #state{socket = Socket}) ->
+	NewState = StateData#state{username = UserName, token = Token, fullname = FullName},
 	lager:info("Auth success with UserName: ~p, Token: ~p~n", [UserName, Token]),
 	% get offline message
 	cs_process_message:send_message_offline(UserName, Socket),
@@ -169,6 +173,7 @@ Reason :: normal
 terminate(_Reason, _StateName, _StateData = #state{username = UserName, socket = Socket}) ->
 	lager:debug("Client disconnected at ~p~n",[Socket]),
 	cs_client_manager:remove_client(UserName),
+	cs_process_friend:notice_friend_offline(UserName),
 	gen_tcp:close(Socket),
 ok.
 

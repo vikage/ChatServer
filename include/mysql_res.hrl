@@ -1,1 +1,1 @@
--record(mysql_friend_item,{user1, user2, avatar}).
+-record(mysql_friend_item,{user1, user2, avatar, fullname}).

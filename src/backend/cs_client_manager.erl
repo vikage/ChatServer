@@ -7,7 +7,7 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([add_client/3,remove_client/1,find_client/1]).
+-export([add_client/4,remove_client/1,find_client/1]).
 
 
 
@@ -16,9 +16,10 @@
 %% ====================================================================
 
 
-add_client(UserName,Token,Pid) when is_pid(Pid) ->
+add_client(UserName,FullName,Token,Pid) when is_pid(Pid) ->
 	lager:debug("New client online with name \"~p\" at ~p~n",[UserName, Pid]),
-	cs_client:change_state_online(UserName, Token, Pid),
+	cs_client:change_state_online(UserName,FullName, Token, Pid),
+	cs_process_friend:notice_friend_online(UserName),
 	case find_client(UserName) of
 		{ok, #tbl_user_onl{pid = OldPid}} ->
 			if
@@ -30,7 +31,7 @@ add_client(UserName,Token,Pid) when is_pid(Pid) ->
 			end;
 		A -> lager:debug("Find user kick result ~p~n",[A])
 	end,
-	ets:insert(tbl_user_onl, #tbl_user_onl{username = UserName, pid = Pid}).
+	ets:insert(tbl_user_onl, #tbl_user_onl{username = UserName, pid = Pid, fullname = FullName}).
 
 find_client(UserName) ->
 	case ets:lookup(tbl_user_onl, UserName) of

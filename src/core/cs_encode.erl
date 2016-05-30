@@ -39,8 +39,9 @@ encode_data(#res_user_auth{}) ->
 	[];
 encode_data(#res_send_message{time = Time}) ->
 	[{<<"time">>,Time}];
-encode_data(#res_received_message{from_user_name = FromUserName, message = Message, datetime = DateTime, message_id = MessageId}) ->
+encode_data(#res_received_message{from_user_name = FromUserName, from_fullname = FromFullName, message = Message, datetime = DateTime, message_id = MessageId}) ->
 	[{<<"from_user_name">>, FromUserName},
+	 {<<"sender_fullname">>, FromFullName},
 	 {<<"message">>, Message},
 	 {<<"message_id">>, MessageId},
 	 {<<"datetime">>, DateTime}];
@@ -50,9 +51,11 @@ encode_data(#res_message_offline{list_message = ListMessage}) ->
 	lists:foldl(fun(#tbl_message{from_user = FromUserName,
 								 message = Message,
 								 datetime = DateTime,
-								 message_id = MessageId}, R) -> 
+								 message_id = MessageId,
+								 sender_fullname = FullName}, R) -> 
 						[[{<<"from_user_name">>, FromUserName},
 						  {<<"message">>, Message},
+						  {<<"sender_fullname">>, FullName},
 						  {<<"message_id">>, MessageId},
 						  {<<"datetime">>, DateTime}] | R]
 				end, [], ListMessage);
@@ -63,6 +66,10 @@ encode_data(#res_send_notification{title = Title, body = Body}) ->
 	[{<<"body">>, Body}, {<<"title">>, Title}];
 encode_data(#res_list_friend{list_encoded = List}) ->
 	List;
+encode_data(#res_notice_friend_online{username = UserName}) ->
+	[{<<"username">>, UserName}];
+encode_data(#res_notice_friend_offline{username = UserName}) ->
+	[{<<"username">>, UserName}];
 encode_data(_) ->
 	[].
 

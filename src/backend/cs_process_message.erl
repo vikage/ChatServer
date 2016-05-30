@@ -43,11 +43,12 @@ send_message(MessageObj = #tbl_message{to_user = ToUserName, from_user = UserNam
 			% Find user from cs_client_manager
 			case cs_client_manager:find_client(ToUserName) of
 				{error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUserName,Reason]);
-				{ok, #tbl_user_onl{pid = U_Pid}} ->
+				{ok, #tbl_user_onl{pid = U_Pid, fullname = TargetFullName}} ->
 					lager:info("Detect user ~p at Pid: ~p~n", [ToUserName, U_Pid]),
 					DataRev = #res_received_message{from_user_name = UserName,
+													from_fullname = TargetFullName,
 													message = Message,
-													message_id = MessageId,
+													message_id = MessageId, 
 													datetime = DateTime},
 					ResponseReceivedMessage = #response{group = ?GROUP_CHAT,
 														type = ?TYPE_RECEIVED_MESSAGE,

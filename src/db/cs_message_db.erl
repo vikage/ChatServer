@@ -117,7 +117,7 @@ code_change(OldVsn, State, Extra) ->
 
 
 new_message(MessageObj) ->
-	Date = util:get_date_time(os:timestamp()),
+	Date = util:get_current_date_time(),
 	call(#db_message_new{messageObj = MessageObj#tbl_message{datetime = Date}}).
 delete_message(MessageId) ->
 	call(#db_message_delete{message_id = MessageId}).

@@ -32,4 +32,6 @@
 -define(TYPE_REJECT_FRIEND_REQUEST,<<"reject_friend_request">>).
 -define(TYPE_SEND_NOTIFICATION,<<"send_notification">>).
 -define(TYPE_GET_LIST_FRIEND,<<"get_list_friend">>).
+-define(TYPE_NOTICE_FRIEND_ONLINE,<<"notice_friend_online">>).
+-define(TYPE_NOTICE_FRIEND_OFFLINE,<<"notice_friend_offline">>).
 

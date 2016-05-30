@@ -4,13 +4,15 @@
 -record(res_user_info,{username,fullname,email,phone}).
 -record(res_user_auth,{}).
 -record(res_send_message,{time}).
--record(res_received_message,{message_id, from_user_name, message, datetime}).
+-record(res_received_message,{message_id, from_user_name,from_fullname, message, datetime}).
 -record(res_confirm_received_message,{}).
 -record(res_message_offline,{list_message}).
 -record(res_received_friend_request,{request_id, from_user}).
 
 -record(res_send_notification, {body, title}).
 -record(res_list_friend,{list_encoded}).
+-record(res_notice_friend_online,{username}).
+-record(res_notice_friend_offline,{username}).
 
 -define(API_DONE,							16#0000).
 -define(API_PARAMETER_FAIL, 				16#0001).

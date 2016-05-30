@@ -7,7 +7,8 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([accept_friend_request/3,add_request_friend/2,get_list_friend/2]).
+-export([accept_friend_request/3,add_request_friend/2,get_list_friend/2,notice_friend_online/1]).
+-export([notice_friend_offline/1]).
 
 
 
@@ -83,10 +84,11 @@ add_request_friend(OurName, ToUser) ->
 get_list_friend(OurName, Page) ->
 	case cs_friend_db:get_list_friend(OurName, Page) of
 		#db_res{error = ?DB_EMPTY} ->
-			{?API_EMPTY, undefined};
+			%% EMPTY
+			{?API_DONE, undefined};
 		#db_res{error = ?DB_DONE, result = List} ->
 			Fun = fun(Hd, Accu) ->
-						  #mysql_friend_item{user1 = U1, user2 = U2, avatar = Avatar} = Hd,
+						  #mysql_friend_item{user1 = U1, user2 = U2, avatar = Avatar, fullname = FullName} = Hd,
 						  FriendName = case U1 of
 										   OurName -> U2;
 										   _ -> U1
@@ -94,12 +96,69 @@ get_list_friend(OurName, Page) ->
 						  % Check user F online
 						  Result = case cs_client_manager:find_client(FriendName) of
 									   {ok, #tbl_user_onl{}} ->
-										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,1}];
+										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,1}, {<<"fullname">>, FullName}];
 									   _ ->
-										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,0}]
+										   [{<<"username">>, FriendName},{<<"avatar">>, Avatar},{<<"status">>,0}, {<<"fullname">>, FullName}]
 								   end,
 						  [Result|Accu]
 				  end,
 			ListF = lists:foldl(Fun, [], List),
 			{?API_DONE, #res_list_friend{list_encoded = ListF}}
+	end.
+
+notice_friend_online(OurName) ->
+	case cs_friend_db:get_list_friend_all(OurName) of
+		#db_res{error = ?DB_EMPTY} ->
+			%% EMPTY
+			ok;
+		#db_res{error = ?DB_DONE, result = List} ->
+			Fun = fun(Hd) ->
+						  #mysql_friend_item{user1 = U1, user2 = U2} = Hd,
+						  FriendName = case U1 of
+										   OurName -> U2;
+										   _ -> U1
+									   end,
+						  % Check user F online
+						  case cs_client_manager:find_client(FriendName) of
+									   {ok, #tbl_user_onl{pid = Pid, username = FriendName}} ->
+										   Record = #res_notice_friend_online{username = OurName},
+										   ResponseRecord = #response{group = ?GROUP_FRIEND,
+													   type = ?TYPE_NOTICE_FRIEND_ONLINE,
+													   req_id = 0,
+													   result = 0,
+													   data = Record},
+											cs_client:send_data_res(Pid, ResponseRecord);
+									   _ -> ok
+							end
+				  end,
+			lists:foreach(Fun, List),
+			ok
+	end.
+
+notice_friend_offline(OurName) ->
+	case cs_friend_db:get_list_friend_all(OurName) of
+		#db_res{error = ?DB_EMPTY} ->
+			ok;
+		#db_res{error = ?DB_DONE, result = List} ->
+			Fun = fun(Hd) ->
+						  #mysql_friend_item{user1 = U1, user2 = U2} = Hd,
+						  FriendName = case U1 of
+										   OurName -> U2;
+										   _ -> U1
+									   end,
+						  % Check user F online
+						  case cs_client_manager:find_client(FriendName) of
+									   {ok, #tbl_user_onl{pid = Pid, username = FriendName}} ->
+										   Record = #res_notice_friend_offline{username = OurName},
+										   ResponseRecord = #response{group = ?GROUP_FRIEND,
+													   type = ?TYPE_NOTICE_FRIEND_OFFLINE,
+													   req_id = 0,
+													   result = 0,
+													   data = Record},
+											cs_client:send_data_res(Pid, ResponseRecord);
+									   _ -> ok
+							end
+				  end,
+			lists:foreach(Fun, List),
+			ok
 	end.
