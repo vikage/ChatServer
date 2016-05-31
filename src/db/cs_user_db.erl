@@ -10,7 +10,8 @@
 %% API functions
 %% ====================================================================
 -export([start_link/0]).
--export([new_user/1,user_info/1,update_info/1,query_update_user/1]).
+-export([new_user/1,user_info/1,update_info/1,query_update_user/1,update_avatar/2,search/3]).
+-export([query_search/3]).
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -126,7 +127,11 @@ user_info(Uid) ->
 	call(#db_user_info{username = Uid}).
 update_info(U) ->
 	call(#db_user_update{user = U}).
+update_avatar(UserName,Avatar) ->
+	call(#db_user_update_avatar{username = UserName, avatar = Avatar }).
 
+search(UserName,Keyword, Page) ->
+	call(#db_user_search{keyword = Keyword, page = Page, username = UserName}).
 
 call(Data) ->
 	Req = #db_request{data = Data},
@@ -166,6 +171,22 @@ process(#db_user_update{user = U = #tbl_users{username = Username}}) ->
 					#db_res{reason = Reason, error = ?DB_SYS_ERROR}
 			end
 	end;
+process(#db_user_update_avatar{username = UserName, avatar = Avatar}) ->
+	case query_username(UserName) of
+		not_found -> #db_res{error = ?DB_NOT_FOUND};
+		_CurrentU = #tbl_users{} ->
+			case query_update_avatar(UserName, Avatar) of
+				ok -> #db_res{};
+				{error, Reason} ->
+					#db_res{reason = Reason, error = ?DB_SYS_ERROR}
+			end
+	end;
+process(#db_user_search{username = UserName, keyword = Keyword, page = Page}) ->
+	case query_search(Keyword, Page, UserName) of
+		not_found -> #db_res{error = ?DB_EMPTY};
+		List = [_|_] ->
+			#db_res{result = List}
+	end;
 process(Request) ->
 	{error, badmatch}.
 
@@ -184,12 +205,20 @@ query_new_user(User) ->
 	end.
 
 query_update_user(User) ->
-	case mysql:query(whereis(mysql), "UPDATE tbl_user SET password = ?, fullname = ?, phone = ?, email = ? WHERE username = ?",
+	case mysql:query(whereis(mysql), "UPDATE tbl_user SET password = ?, fullname = ?, phone = ?, email = ?, avatar = ? WHERE username = ?",
 					 [User#tbl_users.password,
 					  User#tbl_users.fullname,
 					  User#tbl_users.phone,
 					  User#tbl_users.email,
+					  User#tbl_users.avatar,
 					  User#tbl_users.username]) of
+		ok -> ok;
+		{error, Reason} -> {error, Reason}
+	end.
+
+query_update_avatar(UserName,Avatar) ->
+	case mysql:query(whereis(mysql), "UPDATE tbl_user SET avatar = ? WHERE username = ?",
+					 [Avatar,UserName]) of
 		ok -> ok;
 		{error, Reason} -> {error, Reason}
 	end.
@@ -198,5 +227,21 @@ query_username(UserName) ->
 	case mysql:query(whereis(mysql), "SELECT * FROM tbl_user WHERE username = ?",[UserName]) of
 	{ok, _Fields, _Rows = [U|_]} ->
 		list_to_tuple([tbl_users|U]);
+	_ -> not_found
+	end.
+
+query_search(Keyword,Page,UserName) ->
+	Limit = 20 * (Page - 1),
+	Key = <<<<"%">>/binary,Keyword/binary,<<"%">>/binary>>,
+	case mysql:query(whereis(mysql), 
+					 "SELECT username,fullname,avatar FROM tbl_user 
+WHERE (username LIKE ? or fullname LIKE ? or email LIKE ? OR phone like ?) 
+AND username not in 
+(SELECT user1 as username FROM tbl_friend WHERE user2 = ?
+UNION
+SELECT user2 as username FROM tbl_friend WHERE user1 = ? ) 
+AND username != ? LIMIT ?,10",[Key,Key,Key,Key,UserName,UserName,UserName,Limit]) of
+		{ok, _Fields, Rows = [_|_]} ->
+		[list_to_tuple([mysql_user_search|R]) || R <- Rows];
 	_ -> not_found
 	end.

@@ -55,6 +55,15 @@ decode_data(?GROUP_USER, ?TYPE_ME_INFO, Data) ->
 decode_data(?GROUP_USER, ?TYPE_USER_AUTH, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	#cmd_user_auth{token = Token};
+decode_data(?GROUP_USER, ?TYPE_UPDATE_AVATAR, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	Avatar = maps:get(<<"avatar">>, Data), 
+	#cmd_update_avatar{token = Token, avatar = Avatar}; 
+decode_data(?GROUP_USER, ?TYPE_SEARCH_USER, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	Keyword = maps:get(<<"keyword">>, Data),
+	Page = maps:get(<<"page">>, Data),
+	#cmd_search_user{token = Token, keyword = Keyword, page = Page};
 decode_data(?GROUP_CHAT, ?TYPE_SEND_MESSAGE, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	ToUserName = maps:get(<<"to_user_name">>, Data),
@@ -82,6 +91,10 @@ decode_data(?GROUP_FRIEND, ?TYPE_REJECT_FRIEND_REQUEST, Data) ->
 decode_data(?GROUP_FRIEND, ?TYPE_GET_LIST_FRIEND, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	Page = maps:get(<<"page">>, Data),
-	#cmd_get_list_friend{token = Token, page = Page};
+	#cmd_get_list_friend{token = Token, page = Page}; 
+decode_data(?GROUP_FRIEND, ?TYPE_GET_LIST_FRIEND_REQUEST, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	Page = maps:get(<<"page">>, Data),
+	#cmd_get_list_friend_request{token = Token, page = Page};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

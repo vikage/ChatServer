@@ -8,7 +8,7 @@
 %% API functions
 %% ====================================================================
 -export([accept_friend_request/3,add_request_friend/2,get_list_friend/2,notice_friend_online/1]).
--export([notice_friend_offline/1]).
+-export([notice_friend_offline/1,search_user/3,get_friend_request/2]).
 
 
 
@@ -161,4 +161,21 @@ notice_friend_offline(OurName) ->
 				  end,
 			lists:foreach(Fun, List),
 			ok
+	end.
+
+search_user(UserName,Keyword,Page) ->
+	case cs_user_db:search(UserName, Keyword, Page) of
+		#db_res{error = ?DB_EMPTY} ->
+			{?API_DONE, undefined};
+		#db_res{error = ?DB_DONE, result = List} ->
+			{?API_DONE, #res_search_user{list = List}}
+	end.
+
+
+get_friend_request(UserName,Page) ->
+	case cs_friend_request_db:get_list_request(UserName, Page) of
+		#db_res{error = ?DB_EMPTY} ->
+			{?API_DONE, undefined};
+		#db_res{error = ?DB_DONE, result = List} ->
+			{?API_DONE, #res_get_list_friend_request{list = List}}
 	end.

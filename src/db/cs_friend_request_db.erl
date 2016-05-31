@@ -11,7 +11,8 @@
 %% ====================================================================
 -export([start_link/0]).
 -export([query_insert/1,query_get/1,query_delete/1]).
--export([new_request/1, remove_request/1,get_request/1]).
+-export([new_request/1, remove_request/1,get_request/1,get_list_request/2]).
+-export([query_list_request/2]).
 
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -129,6 +130,8 @@ call(Data) ->
 	Req = #db_request{data = Data},
 	gen_server:call(?MODULE, {db_query,Req}).
 
+get_list_request(UserName,Page) ->
+	call(#db_friend_request_get_list{username = UserName, page = Page}).
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
@@ -153,6 +156,12 @@ process(#db_friend_request_get{request_id = RId}) ->
 			#db_res{result = FRO};
 		not_found ->
 			#db_res{error = ?DB_NOT_FOUND, reason = <<"NOT FOUND REQUEST FRIEND">>}
+	end;
+process(#db_friend_request_get_list{username = UserName, page = Page}) ->
+	case query_list_request(UserName, Page) of
+		not_found -> #db_res{error = ?DB_EMPTY};
+		List = [_|_] ->
+			#db_res{result = List}
 	end;
 process(_Request) ->
 	{error, badmatch}.
@@ -180,4 +189,12 @@ query_delete(RId) ->
 		ok -> ok;
 		{error, Reason} -> {error, Reason};
 		Error -> {error, Error}
+	end.
+
+query_list_request(UserName, Page) ->
+	Limit = 20 * (Page - 1),
+	case mysql:query(whereis(mysql),"SELECT request_id,from_user,fullname,avatar FROM tbl_friend_request INNER JOIN tbl_user ON tbl_friend_request.from_user = tbl_user.username WHERE to_user = ? LIMIT ?,20",[UserName,Limit]) of
+		{ok, _Fields, Rows = [_|_]} ->
+		[list_to_tuple([mysql_get_friend_request|R]) || R <- Rows];
+	_ -> not_found
 	end.

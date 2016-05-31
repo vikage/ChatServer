@@ -3,6 +3,9 @@
 -record(res_login, {token}).
 -record(res_user_info,{username,fullname,email,phone, avatar}).
 -record(res_user_auth,{}).
+-record(res_search_user,{list}).
+-record(res_get_list_friend_request,{list}).
+
 -record(res_send_message,{time}).
 -record(res_received_message,{message_id, from_user_name,from_fullname, message, datetime}).
 -record(res_confirm_received_message,{}).

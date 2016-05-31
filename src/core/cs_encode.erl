@@ -37,6 +37,9 @@ encode_data(#res_user_info{username = UserName,
 			  {<<"phone">>, Phone},
 			  {<<"email">>, Email},
 			  {<<"avatar">>, Avatar}]);
+encode_data(#res_search_user{list = List}) ->
+	[[{<<"username">>,UserName},{<<"fullname">>, FullName},{<<"avatar">>,Avatar}] || #mysql_user_search{username = UserName,fullname = FullName, avatar = Avatar} <- List];
+
 encode_data(#res_user_auth{}) ->
 	[];
 encode_data(#res_send_message{time = Time}) ->
@@ -72,6 +75,11 @@ encode_data(#res_notice_friend_online{username = UserName}) ->
 	[{<<"username">>, UserName}];
 encode_data(#res_notice_friend_offline{username = UserName}) ->
 	[{<<"username">>, UserName}];
+encode_data(#res_get_list_friend_request{list = List}) ->
+	[[{<<"request_id">>, RId},
+	  {<<"username">>,UserName},
+	  {<<"fullname">>, FullName},
+	  {<<"avatar">>, Avatar}] || #mysql_get_friend_request{request_id = RId, username = UserName, fullname = FullName, avatar = Avatar} <- List];
 encode_data(_) ->
 	[].
 

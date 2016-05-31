@@ -21,6 +21,8 @@
 -record(db_user_info,{username}).
 -record(db_user_info_username,{username}).
 -record(db_user_update,{user}).
+-record(db_user_update_avatar,{username, avatar}).
+-record(db_user_search,{username,keyword,page}).
 
 -record(db_token_new,{token}).
 -record(db_token_get,{token_string}).
@@ -39,3 +41,4 @@
 -record(db_friend_request_add,{request}).
 -record(db_friend_request_remove, {request_id}).
 -record(db_friend_request_get, {request_id}).
+-record(db_friend_request_get_list,{username,page}).
