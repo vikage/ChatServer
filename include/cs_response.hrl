@@ -1,7 +1,7 @@
 -record(response,{group,type,result,req_id,data}).
 
 -record(res_login, {token}).
--record(res_user_info,{username,fullname,email,phone}).
+-record(res_user_info,{username,fullname,email,phone, avatar}).
 -record(res_user_auth,{}).
 -record(res_send_message,{time}).
 -record(res_received_message,{message_id, from_user_name,from_fullname, message, datetime}).

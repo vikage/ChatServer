@@ -30,11 +30,13 @@ encode_data(#res_login{token = Token}) ->
 encode_data(#res_user_info{username = UserName,
 						   fullname = FullName,
 						   phone 	= Phone,
-						   email	= Email}) ->
+						   email	= Email,
+						   avatar	= Avatar}) ->
 	validate([{<<"username">>, UserName},
 			  {<<"fullname">>, FullName},
 			  {<<"phone">>, Phone},
-			  {<<"email">>, Email}]);
+			  {<<"email">>, Email},
+			  {<<"avatar">>, Avatar}]);
 encode_data(#res_user_auth{}) ->
 	[];
 encode_data(#res_send_message{time = Time}) ->

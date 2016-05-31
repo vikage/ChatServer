@@ -212,11 +212,11 @@ query_delete(User1,User2) ->
 
 query_get_list_friend(UserName, Page) ->
 	Limit = 20 * (Page - 1),
-	case mysql:query(whereis(mysql), "SELECT user1,user2,avatar,fullname FROM (SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
-										WHERE user2 = ?
+	case mysql:query(whereis(mysql), "SELECT user1,user2,avatar,fullname FROM (SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user2 = tbl_user.`username` 
+										WHERE user1 = ?
 										UNION
 										SELECT friend_id,user1,user2,avatar,fullname FROM tbl_friend INNER JOIN tbl_user ON `tbl_friend`.user1 = tbl_user.`username` 
-										WHERE user1 = ?) AS U LIMIT ?,20",[UserName,UserName, Limit]) of
+										WHERE user2 = ?) AS U LIMIT ?,20",[UserName,UserName, Limit]) of
 	{ok, _Fields, Rows = [_|_]} ->
 		[list_to_tuple([mysql_friend_item|R]) || R <- Rows];
 	_ -> not_found

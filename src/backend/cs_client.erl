@@ -172,8 +172,12 @@ Reason :: normal
 %% ====================================================================
 terminate(_Reason, _StateName, _StateData = #state{username = UserName, socket = Socket}) ->
 	lager:debug("Client disconnected at ~p~n",[Socket]),
-	cs_client_manager:remove_client(UserName),
-	cs_process_friend:notice_friend_offline(UserName),
+	case UserName of
+		undefined -> ok;
+		_ ->
+			cs_client_manager:remove_client(UserName),
+			cs_process_friend:notice_friend_offline(UserName)
+	end,
 	gen_tcp:close(Socket),
 ok.
 

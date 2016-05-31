@@ -49,6 +49,9 @@ decode_data(?GROUP_USER, ?TYPE_REGISTER, Data) ->
 decode_data(?GROUP_USER, ?TYPE_USER_INFO, Data) ->
 	UserName = maps:get(<<"username">>, Data),
 	#cmd_user_info{username = UserName};
+decode_data(?GROUP_USER, ?TYPE_ME_INFO, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	#cmd_me_info{token = Token};
 decode_data(?GROUP_USER, ?TYPE_USER_AUTH, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	#cmd_user_auth{token = Token};
