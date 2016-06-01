@@ -5,6 +5,8 @@
 -record(res_user_auth,{}).
 -record(res_search_user,{list}).
 -record(res_get_list_friend_request,{list}).
+%% status = 0(request yet), status = 1(me request friend), status = 2(not you request), status = 3(already friend)
+-record(res_user_info_with_status, {username,fullname, avatar, status}). 
 
 -record(res_send_message,{time}).
 -record(res_received_message,{message_id, from_user_name,from_fullname, message, datetime}).

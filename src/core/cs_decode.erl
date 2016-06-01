@@ -48,7 +48,8 @@ decode_data(?GROUP_USER, ?TYPE_REGISTER, Data) ->
 				  phone = Phone}; 
 decode_data(?GROUP_USER, ?TYPE_USER_INFO, Data) ->
 	UserName = maps:get(<<"username">>, Data),
-	#cmd_user_info{username = UserName};
+	Token = maps:get(<<"token">>, Data),
+	#cmd_user_info{username = UserName, token = Token};
 decode_data(?GROUP_USER, ?TYPE_ME_INFO, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	#cmd_me_info{token = Token};

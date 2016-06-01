@@ -37,6 +37,11 @@ encode_data(#res_user_info{username = UserName,
 			  {<<"phone">>, Phone},
 			  {<<"email">>, Email},
 			  {<<"avatar">>, Avatar}]);
+encode_data(#res_user_info_with_status{username = UserName, fullname = FullName, avatar = Avatar, status = Status}) ->
+	[{<<"username">>, UserName},
+	 {<<"fullname">>, FullName},
+	 {<<"avatar">>, Avatar},
+	 {<<"status">>, Status}];
 encode_data(#res_search_user{list = List}) ->
 	[[{<<"username">>,UserName},{<<"fullname">>, FullName},{<<"avatar">>,Avatar}] || #mysql_user_search{username = UserName,fullname = FullName, avatar = Avatar} <- List];
 

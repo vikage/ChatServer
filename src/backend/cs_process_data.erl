@@ -69,20 +69,14 @@ process(#cmd_register{username = Username,
 				_ -> {?API_SYSTEM_FAIL, undefined}
 			end
 	end;
-process(#cmd_user_info{username = UserName}, _StateData) ->
-	case cs_user_db:user_info(UserName) of
-		#db_res{result = #tbl_users{username = UserName,
-									fullname = FullName,
-									phone = Phone,
-									email = Email,
-									avatar = Avatar}} ->
-			{?API_DONE, #res_user_info{username = UserName,
-									   fullname = FullName,
-									   phone 	= Phone,
-									   email 	= Email,
-									   avatar 	= Avatar}};
-		#db_res{error = ?DB_NOT_FOUND} -> {?API_USER_NOT_FOUND, undefined};
-		_ -> {?API_USER_LOGIN_FAIL, undefined}
+process(#cmd_user_info{username = TargetUserName, token = Token}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> 
+			lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+			{?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName,_FullName} -> 
+			lager:info("Check token success with Token: ~p~n",[Token]),
+			cs_process_user:get_user_info(TargetUserName, UserName)
 	end;
 process(#cmd_me_info{token = Token}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
