@@ -11,7 +11,7 @@
 %% ====================================================================
 -export([start_link/0]).
 -export([new_user/1,user_info/1,update_info/1,query_update_user/1,update_avatar/2,search/3]).
--export([query_search/3]).
+-export([query_search/3,update_device_token/2]).
 start_link() ->
 	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -53,10 +53,10 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call({db_query, Request}, From, State) ->
+handle_call({db_query, Request}, _From, State) ->
 	R = process(Request#db_request.data),
 	{reply, R, State};
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -72,7 +72,7 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
@@ -87,7 +87,7 @@ handle_cast(Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -100,7 +100,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -112,7 +112,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% ====================================================================
@@ -130,6 +130,9 @@ update_info(U) ->
 update_avatar(UserName,Avatar) ->
 	call(#db_user_update_avatar{username = UserName, avatar = Avatar }).
 
+update_device_token(UserName,DeviceToken) ->
+	call(#db_user_update_device_token{username = UserName, device_token = DeviceToken}).
+
 search(UserName,Keyword, Page) ->
 	call(#db_user_search{keyword = Keyword, page = Page, username = UserName}).
 
@@ -138,7 +141,7 @@ call(Data) ->
 	gen_server:call(?MODULE, {db_query,Req}).
 
 %% ====================================================================
-%% DB Process
+%% DB Process 
 %% ====================================================================
 process(#db_user_new{user = #tbl_users{username = undefined}}) ->
 	#db_res{error = ?DB_REQ_PARAMETER_FAIL};
@@ -187,11 +190,17 @@ process(#db_user_search{username = UserName, keyword = Keyword, page = Page}) ->
 		List = [_|_] ->
 			#db_res{result = List}
 	end;
-process(Request) ->
+process(#db_user_update_device_token{username = UserName, device_token = Device_token}) ->
+	case query_update_device_token(UserName, Device_token) of
+		ok -> #db_res{};
+		{error, Reason} ->
+					#db_res{reason = Reason, error = ?DB_SYS_ERROR}
+		end;
+process(_Request) ->
 	{error, badmatch}.
 
 query_new_user(User) ->
-	case mysql:query(whereis(mysql), "INSERT INTO tbl_user VALUES(?,?,?,?,?,?,?)",
+	case mysql:query(whereis(mysql), "INSERT INTO tbl_user VALUES(?,?,?,?,?,?,?,?)",
 							 [
 								User#tbl_users.username,
 								User#tbl_users.password,
@@ -199,6 +208,7 @@ query_new_user(User) ->
 								User#tbl_users.phone,
 								User#tbl_users.email,
 								User#tbl_users.avatar,
+								User#tbl_users.push_token, 
 								User#tbl_users.create_date]) of
 				ok -> ok;
 				{error, Reason} -> {error,Reason}
@@ -244,4 +254,13 @@ AND username != ? LIMIT ?,10",[Key,Key,Key,Key,UserName,UserName,UserName,Limit]
 		{ok, _Fields, Rows = [_|_]} ->
 		[list_to_tuple([mysql_user_search|R]) || R <- Rows];
 	_ -> not_found
+	end.
+
+query_update_device_token(UserName,DeviceToken) ->
+	case mysql:query(whereis(mysql), "UPDATE tbl_user SET push_token = ? WHERE username = ?",
+					 [DeviceToken,UserName]) of
+		ok -> ok;
+		{error, Reason} -> 
+			lager:error("Query update device token error with reason: ~p",[Reason]),
+			{error, Reason}
 	end.

@@ -62,10 +62,10 @@ get_token(TokenString) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call({db_query, Request}, From, State) ->
+handle_call({db_query, Request}, _From, State) ->
 	R = process(Request#db_request.data),
 	{reply, R, State};
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -81,7 +81,7 @@ handle_call(Request, From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
@@ -96,7 +96,7 @@ handle_cast(Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -109,7 +109,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -121,7 +121,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
@@ -145,7 +145,7 @@ process(#db_token_get{token_string = TokenString}) ->
 		[#tbl_token{} = Token] ->
 			#db_res{result = Token}
 	end;
-process(Request) ->
+process(_Request) ->
 	{error, badmatch}.
 
 hexstring(<<X:128/big-unsigned-integer>>) ->

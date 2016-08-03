@@ -60,6 +60,10 @@ decode_data(?GROUP_USER, ?TYPE_UPDATE_AVATAR, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	Avatar = maps:get(<<"avatar">>, Data), 
 	#cmd_update_avatar{token = Token, avatar = Avatar}; 
+decode_data(?GROUP_USER, ?TYPE_UPDATE_DEVICE_TOKEN, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	DT = maps:get(<<"device_token">>, Data),
+	#cmd_update_device_token{token = Token, device_token = DT};
 decode_data(?GROUP_USER, ?TYPE_SEARCH_USER, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	Keyword = maps:get(<<"keyword">>, Data),
@@ -97,5 +101,9 @@ decode_data(?GROUP_FRIEND, ?TYPE_GET_LIST_FRIEND_REQUEST, Data) ->
 	Token = maps:get(<<"token">>, Data),
 	Page = maps:get(<<"page">>, Data),
 	#cmd_get_list_friend_request{token = Token, page = Page};
+decode_data(?GROUP_FRIEND, ?TYPE_UNFRIEND, Data) ->
+	Token = maps:get(<<"token">>, Data),
+	FriendUserName = maps:get(<<"friend_username">>, Data),
+	#cmd_unfriend{token = Token, friend_username = FriendUserName};
 decode_data(_Group, _Type, _Data) ->
 	undefined.

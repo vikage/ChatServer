@@ -13,6 +13,8 @@ start() ->
 	application:start(cs).
 
 start(_StartType, _StartArgs) ->
+	lager:start(),
+	ssl:start(),
 	mnesia:start(),
 	cs_db:create_ets(),
 	cs_db:create_db(),

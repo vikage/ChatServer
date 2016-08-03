@@ -12,9 +12,10 @@
 -record(res_received_message,{message_id, from_user_name,from_fullname, message, datetime}).
 -record(res_confirm_received_message,{}).
 -record(res_message_offline,{list_message}).
--record(res_received_friend_request,{request_id, from_user}).
+-record(res_received_friend_request,{request_id, from_user, fullname}).
 
 -record(res_send_notification, {body, title}).
+-record(res_other_user_accept_friend_request,{username,fullname}).
 -record(res_list_friend,{list_encoded}).
 -record(res_notice_friend_online,{username}).
 -record(res_notice_friend_offline,{username}).

@@ -25,6 +25,7 @@ start_link() ->
 init([]) ->
 	Childs = [?CHILD('cs_tcp_listener', worker),
 			  ?CHILD('cs_client_sup',supervisor),
-			  ?CHILD('cs_db_sup',supervisor)],
+			  ?CHILD('cs_db_sup',supervisor),
+			  ?CHILD('apns', worker)],
     {ok, { {one_for_one, 5, 10}, Childs}}.
 

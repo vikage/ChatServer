@@ -112,6 +112,15 @@ process(#cmd_update_avatar{token = Token, avatar = Avatar}, StateData) ->
 				_ -> {?API_SYSTEM_FAIL, undefined}
 			end
 	end;
+process(#cmd_update_device_token{token = Token, device_token = DT}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> 
+			lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+			{?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName,_FullName} ->
+			cs_user_db:update_device_token(UserName, DT),
+			{?API_DONE, undefined}
+	end;
 process(#cmd_search_user{token = Token, keyword = Keyword, page = Page}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
 		{error,Reason} -> 
@@ -174,9 +183,9 @@ process(#cmd_add_friend{token = Token, to_user = ToUser}, StateData) ->
 		{error,Reason} -> 
 			lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
 			{?API_USER_AUTH_TOKEN_FAIL, undefined};
-		{ok, UserName,_FullName} -> 
+		{ok, UserName,FullName} -> 
 			lager:info("Check token success with Token: ~p~n",[Token]),
-			cs_process_friend:add_request_friend(UserName, ToUser)
+			cs_process_friend:add_request_friend(UserName,FullName, ToUser)
 	end;
 process(#cmd_reject_friend_request{token = Token, from_user = FromUser}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
@@ -193,10 +202,10 @@ process(#cmd_accept_friend_request{token = Token, from_user = From}, StateData) 
 		{error,Reason} -> 
 			lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
 			{?API_USER_AUTH_TOKEN_FAIL, undefined};
-		{ok, UserName,_FullName} -> 
+		{ok, UserName,FullName} -> 
 			lager:info("Check token success with Token: ~p~n",[Token]),
 			RId = <<From/binary,<<",">>/binary, UserName/binary>>,
-			cs_process_friend:accept_friend_request(UserName, RId, From)
+			cs_process_friend:accept_friend_request(UserName,FullName, RId, From)
 	end;
 process(#cmd_get_list_friend{token = Token, page = Page}, StateData) ->
 	case cs_client:check_token(Token, StateData) of
@@ -215,6 +224,15 @@ process(#cmd_get_list_friend_request{token = Token, page = Page}, StateData) ->
 		{ok, UserName,_FullName} -> 
 			lager:info("Check token success with Token: ~p~n",[Token]),
 			cs_process_friend:get_friend_request(UserName, Page)
+	end;
+process(#cmd_unfriend{token = Token, friend_username = FriendUserName}, StateData) ->
+	case cs_client:check_token(Token, StateData) of
+		{error,Reason} -> 
+			lager:error("Check token fail with Token: ~p Reason: ~p~n",[Token, Reason]),
+			{?API_USER_AUTH_TOKEN_FAIL, undefined};
+		{ok, UserName,_FullName} -> 
+			lager:info("Check token success with Token: ~p~n",[Token]),
+			cs_process_friend:unfriend(UserName,FriendUserName)
 	end;
 process(_Req, _StateData) ->
 	{?API_BAD_MATCH,undefied}.

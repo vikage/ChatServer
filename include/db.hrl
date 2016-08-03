@@ -1,4 +1,4 @@
--record(tbl_users,{username,password,fullname = <<"">>,phone = <<"">>,email = <<"">>,avatar = <<"">>, create_date}).
+-record(tbl_users,{username,password,fullname = <<"">>,phone = <<"">>,email = <<"">>,avatar = <<"">>,push_token = <<"">>, create_date}).
 -record(tbl_config,{key,val}).
 -record(tbl_token,{token_string,username, create_date}).
 -record(tbl_user_onl,{username,pid,fullname}).
@@ -22,6 +22,7 @@
 -record(db_user_info_username,{username}).
 -record(db_user_update,{user}).
 -record(db_user_update_avatar,{username, avatar}).
+-record(db_user_update_device_token,{username,device_token}).
 -record(db_user_search,{username,keyword,page}).
 
 -record(db_token_new,{token}).

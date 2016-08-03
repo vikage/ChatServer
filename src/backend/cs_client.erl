@@ -133,12 +133,12 @@ wait_for_auth(_Event, StateData) ->
 	{next_state, wait_for_auth, StateData}.
 
 
-handle_event(Event, StateName, StateData) ->
+handle_event(_Event, StateName, StateData) ->
 	{next_state, StateName, StateData}.
 
 
 
-handle_sync_event(Event, From, StateName, StateData) ->
+handle_sync_event(_Event, _From, StateName, StateData) ->
 	Reply = ok,
 	{reply, Reply, StateName, StateData}.
 
@@ -151,9 +151,14 @@ handle_info({tcp, Socket, Packet}, StateName, StateData) ->
 	%cs_client_manager:remove_client(UserName, self()),
 	{stop, normal, StateData};
 handle_info({kill}, _StateName, StateData = #state{socket = Socket}) ->
-	A = <<"close">>,
-	Len = byte_size(A),
-	gen_tcp:send(Socket, <<Len:16,A/binary>>),
+	Obj = #response{group = ?GROUP_USER,
+					type = ?TYPE_KICK_ANOTHER_LOGIN,
+					req_id = 0,
+					result = 0,
+					data = undefined},
+	ResponseBin = cs_encode:encode(Obj),
+	Len = byte_size(ResponseBin),
+	gen_tcp:send(Socket, <<Len:16,ResponseBin/binary>>),
 	gen_tcp:close(Socket),
 	{stop, normal, StateData};
 handle_info(Info, StateName, StateData) ->
@@ -189,7 +194,7 @@ ok.
 OldVsn :: Vsn | {down, Vsn},
 Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, StateName, StateData, Extra) ->
+code_change(_OldVsn, StateName, StateData, _Extra) ->
 {ok, StateName, StateData}.
 
 

@@ -41,8 +41,15 @@ send_message(MessageObj = #tbl_message{to_user = ToUserName, from_user = UserNam
 	case cs_message_db:new_message(MessageObj) of
 		#db_res{result = #tbl_message{message_id = MessageId, datetime = DateTime}} ->
 			% Find user from cs_client_manager
-			case cs_client_manager:find_client(ToUserName) of
-				{error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [ToUserName,Reason]);
+			case cs_client_manager:find_client(ToUserName) of 
+				{error,Reason} -> 
+					lager:debug("Find user ~p fail with reason ~p, Will send notification", [ToUserName,Reason]),
+					case cs_user_db:user_info(ToUserName) of 
+						#db_res{error = ?DB_DONE, result = #tbl_users{push_token = PushToken}} ->
+							MsgPush = lists:flatten(io_lib:format("~s: ~s", [TargetFullName,binary_to_list(Message)])),
+							apns:send_device(MsgPush, PushToken);
+						_ -> ok
+					end;		  
 				{ok, #tbl_user_onl{pid = U_Pid}} ->
 					lager:info("Detect user ~p at Pid: ~p~n", [ToUserName, U_Pid]),
 					DataRev = #res_received_message{from_user_name = UserName,

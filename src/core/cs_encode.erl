@@ -70,8 +70,11 @@ encode_data(#res_message_offline{list_message = ListMessage}) ->
 						  {<<"datetime">>, DateTime}] | R]
 				end, [], ListMessage);
 encode_data(#res_received_friend_request{request_id = RId,
-										 from_user = FromUser}) ->
-	[{<<"request_id">>, RId},{<<"from_user">>, FromUser}];
+										 from_user = FromUser,
+										 fullname = FullName}) ->
+	[{<<"request_id">>, RId},
+	 {<<"from_user">>, FromUser},
+	 {<<"fullname">>, FullName}];
 encode_data(#res_send_notification{title = Title, body = Body}) ->
 	[{<<"body">>, Body}, {<<"title">>, Title}];
 encode_data(#res_list_friend{list_encoded = List}) ->
@@ -85,6 +88,9 @@ encode_data(#res_get_list_friend_request{list = List}) ->
 	  {<<"username">>,UserName},
 	  {<<"fullname">>, FullName},
 	  {<<"avatar">>, Avatar}] || #mysql_get_friend_request{request_id = RId, username = UserName, fullname = FullName, avatar = Avatar} <- List];
+encode_data(#res_other_user_accept_friend_request{username = UserName, fullname = FullName}) ->
+	[{<<"username">>, UserName},
+	 {<<"fullname">>, FullName}];
 encode_data(_) ->
 	[].
 

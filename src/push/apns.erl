@@ -1,25 +1,25 @@
 %% @author ThanhVu
-%% @doc @todo Add description to cs_friend_request_db.
+%% @doc @todo Add description to apns.
 
 
--module(cs_friend_request_db).
+-module(apns).
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
--include("cs.hrl").
+
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([start_link/0]).
--export([query_insert/1,query_get/1,query_delete/1]).
--export([new_request/1, remove_request/1,get_request/1,get_list_request/2]).
--export([query_list_request/2]).
+-export([start_link/0,send_device/2,quick_send/2]).
 
-start_link() ->
-	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+
 %% ====================================================================
 %% Behavioural functions
 %% ====================================================================
--record(state, {}).
+-record(state, {socket, address, port, option,timeout}).
+
+start_link() ->
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% init/1
 %% ====================================================================
@@ -34,7 +34,65 @@ start_link() ->
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
 init([]) ->
-    {ok, #state{}}.
+	Address = "gateway.sandbox.push.apple.com",
+  	Port = 2195,
+  	Cert = "/etc/certs/cert.pem",% "apns-cert.pem",
+  	Key  = "/etc/certs/key.pem", % "apns-key.pem",
+  	Options = [{certfile, Cert}, {keyfile, Key}, {mode, binary}, {verify, verify_none}],
+  	Timeout = 3000,
+  	case ssl:connect(Address, Port, Options, Timeout) of
+    	{ok, Socket} ->
+      		{ok, #state{socket = Socket, address = Address, port = Port, option = Options, timeout = Timeout}};
+    	{error, Reason} ->
+      		{stop, Reason}
+  	end.
+
+quick_send(Msg,DeviceToken) ->
+	NewMsg = if is_binary(Msg) -> binary_to_list(Msg); true -> Msg end,
+	NewDevice = if(is_binary(DeviceToken)) -> binary_to_list(DeviceToken); true -> DeviceToken end,
+	%lager:debug("sent: ~s to ~s~n", [NewMsg, NewDevice]),
+	send_pn([{alert, NewMsg}, {badge, 1}, {sound, "chime"}], NewDevice).
+
+send_pn(Msg, Device) ->
+  Address = "gateway.sandbox.push.apple.com",
+  Port = 2195,
+  Cert = "/etc/certs/cert.pem",% "apns-cert.pem",
+  Key  = "/etc/certs/key.pem", % "apns-key.pem",
+  Options = [{certfile, Cert}, {keyfile, Key}, {mode, binary}, {verify, verify_none}],
+  Timeout = 3000,
+  Bin = hexstr_to_bin(Device),
+  case ssl:connect(Address, Port, Options, Timeout) of
+    {ok, Socket} ->
+      PayloadString = create_json(Msg),
+      Payload = list_to_binary(PayloadString),
+      PayloadLength = size(Payload),
+      Packet = <<0:8,
+      32:16/big,
+      Bin/binary,
+      PayloadLength:16/big,
+      Payload/binary>>,
+      ssl:send(Socket, Packet),
+      ssl:close(Socket),
+      PayloadString;
+    {error, Reason} ->
+      Reason
+  end.
+
+send_device(Msg, DeviceToken) ->
+	NewMsg = if is_binary(Msg) -> binary_to_list(Msg); true -> Msg end,
+	NewDevice = if(is_binary(DeviceToken)) -> binary_to_list(DeviceToken); true -> DeviceToken end,
+	%lager:debug("sent: ~s to ~s~n", [NewMsg, NewDevice]),
+	Bin = hexstr_to_bin(NewDevice),
+	PayloadString = create_json([{alert, NewMsg}, {badge, 1}, {sound, "mario.caf"}]),
+    Payload = list_to_binary(PayloadString),
+    PayloadLength = size(Payload),
+    Packet = <<0:8,
+    32:16/big,
+    Bin/binary,
+    PayloadLength:16/big,
+    Payload/binary>>,
+    gen_server:cast(?MODULE, {push,Packet}).
+
 
 
 %% handle_call/3
@@ -54,9 +112,6 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call({db_query, Request}, _From, State) ->
-	R = process(Request#db_request.data),
-	{reply, R, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -73,7 +128,11 @@ handle_call(_Request, _From, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_cast(_Msg, State) ->
+handle_cast({push,Packet},State = #state{socket = Socket}) ->
+	ssl:send(Socket, Packet),
+	{noreply, State};
+handle_cast(Msg, State) ->
+	io:format("Unknow cast~p~n",[Msg]),
     {noreply, State}.
 
 
@@ -88,7 +147,17 @@ handle_cast(_Msg, State) ->
 	NewState :: term(),
 	Timeout :: non_neg_integer() | infinity.
 %% ====================================================================
-handle_info(_Info, State) ->
+handle_info({ssl_closed, _Socket}, State = #state{address = Address, port = Port, option = Options, timeout = Timeout}) ->
+	lager:info("APNS Socket disconnected"),
+	case ssl:connect(Address, Port, Options, Timeout) of
+    	{ok, NSocket} ->
+			lager:info("APNS socket reconnected"),
+      		{noreply, State#state{socket = NSocket}};
+    	{error, Reason} ->
+      		{stop, Reason}
+  	end;
+handle_info(Info, State) ->
+	io:format("Unknow info~p~n",[Info]),
     {noreply, State}.
 
 
@@ -114,87 +183,34 @@ terminate(_Reason, _State) ->
 	Vsn :: term().
 %% ====================================================================
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}. 
+    {ok, State}.
 
-new_request(FRO) ->
-	NFRO = FRO#tbl_friend_request{datetime = util:get_current_date_time()},
-	call(#db_friend_request_add{request = NFRO}).
 
-remove_request(RId) ->
-	call(#db_friend_request_remove{request_id = RId}).
-
-get_request(RId) ->
-	call(#db_friend_request_get{request_id = RId}).
-
-call(Data) ->
-	Req = #db_request{data = Data},
-	gen_server:call(?MODULE, {db_query,Req}).
-
-get_list_request(UserName,Page) ->
-	call(#db_friend_request_get_list{username = UserName, page = Page}).
 %% ====================================================================
 %% Internal functions
 %% ====================================================================
 
-process(#db_friend_request_add{request = FRO = #tbl_friend_request{request_id = RId}}) ->
-	case query_get(RId) of
-		#tbl_friend_request{} -> #db_res{error = ?DB_ITEM_EXIST, reason = <<"Already request">>};
-		not_found ->
-			case query_insert(FRO) of
-				ok -> #db_res{result = FRO};
-				{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
-			end
-	end;
-process(#db_friend_request_remove{request_id = RId}) ->
-	case query_delete(RId) of
-		ok -> #db_res{};
-		{error, Reason} -> #db_res{error = ?DB_SYS_ERROR, reason = Reason}
-	end;
-process(#db_friend_request_get{request_id = RId}) ->
-	case query_get(RId) of
-		FRO = #tbl_friend_request{} ->
-			#db_res{result = FRO};
-		not_found ->
-			#db_res{error = ?DB_NOT_FOUND, reason = <<"NOT FOUND REQUEST FRIEND">>}
-	end;
-process(#db_friend_request_get_list{username = UserName, page = Page}) ->
-	case query_list_request(UserName, Page) of
-		not_found -> #db_res{error = ?DB_EMPTY};
-		List = [_|_] ->
-			#db_res{result = List}
-	end;
-process(_Request) ->
-	{error, badmatch}.
+% helper for creating json
+create_json(List) ->
+  lists:append(["{\"aps\":{", create_keyvalue(List), "}}"]).
 
-query_insert(FRO) ->
-	case mysql:query(whereis(mysql), "INSERT INTO tbl_friend_request VALUES(?,?,?,?)",
-					 [FRO#tbl_friend_request.request_id,
-					  FRO#tbl_friend_request.from_user,
-					  FRO#tbl_friend_request.to_user,
-					  FRO#tbl_friend_request.datetime]) of
-		ok -> ok;
-		{error, Reason} -> {error, Reason};
-		Error -> {error, Error}
-	end.
+create_keyvalue([Head]) ->
+  create_pair(Head);
+create_keyvalue([Head|Tail]) ->
+  lists:append([create_pair(Head), ",", create_keyvalue(Tail)]).
 
-query_get(RequestId) ->
-	case mysql:query(whereis(mysql), "SELECT * FROM tbl_friend_request WHERE request_id = ?",[RequestId]) of
-	{ok, _Fields, _Rows = [FO|_]} ->
-		list_to_tuple([tbl_friend_request|FO]);
-	_ -> not_found
-	end.
-
-query_delete(RId) ->
-	case mysql:query(whereis(mysql), "DELETE FROM tbl_friend_request WHERE request_id = ?",[RId]) of
-		ok -> ok;
-		{error, Reason} -> {error, Reason};
-		Error -> {error, Error}
-	end.
-
-query_list_request(UserName, Page) ->
-	Limit = 20 * (Page - 1),
-	case mysql:query(whereis(mysql),"SELECT request_id,from_user,fullname,avatar FROM tbl_friend_request INNER JOIN tbl_user ON tbl_friend_request.from_user = tbl_user.username WHERE to_user = ? LIMIT ?,20",[UserName,Limit]) of
-		{ok, _Fields, Rows = [_|_]} ->
-		[list_to_tuple([mysql_get_friend_request|R]) || R <- Rows];
-	_ -> not_found
-	end.
+create_pair({Key, Value}) ->
+	lists:append([add_quotes(atom_to_list(Key)), ":", add_quotes(Value)]).
+add_quotes(String) when is_integer(String) ->
+	integer_to_list(String);
+add_quotes(String) when is_float(String) ->
+	float_to_list(String);
+add_quotes(String) ->
+	lists:append(["\"", String, "\""]).
+hexstr_to_bin(S) ->
+   hexstr_to_bin(S, []).
+hexstr_to_bin([], Acc) ->
+   list_to_binary(lists:reverse(Acc));
+hexstr_to_bin([X,Y|T], Acc) ->
+   {ok, [V], []} = io_lib:fread("~16u", [X,Y]),
+   hexstr_to_bin(T, [V | Acc]).

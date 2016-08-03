@@ -1,4 +1,4 @@
 #!/bin/bash
 rebar3 compile
-erl -pa _build/default/lib/*/ebin -sname chat_server -s lager
+erl -pa _build/default/lib/*/ebin -sname chat_server -s cs_app
 exit 0

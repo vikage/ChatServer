@@ -7,8 +7,8 @@
 %% ====================================================================
 %% API functions
 %% ====================================================================
--export([accept_friend_request/3,add_request_friend/2,get_list_friend/2,notice_friend_online/1]).
--export([notice_friend_offline/1,search_user/3,get_friend_request/2]).
+-export([accept_friend_request/4,add_request_friend/3,get_list_friend/2,notice_friend_online/1]).
+-export([notice_friend_offline/1,search_user/3,get_friend_request/2,unfriend/2]).
 
 
 
@@ -16,7 +16,7 @@
 %% Internal functions
 %% ====================================================================
 
-accept_friend_request(OurName, RId, From) ->
+accept_friend_request(OurName,FullName, RId, From) ->
 	% Check friend request
 	case cs_friend_request_db:get_request(RId) of
 		#db_res{error = ?DB_NOT_FOUND} ->
@@ -32,11 +32,9 @@ accept_friend_request(OurName, RId, From) ->
 					case cs_client_manager:find_client(From) of
 						{error,Reason} -> lager:debug("Find user ~p fail with reason ~p~n", [From,Reason]);
 						{ok, #tbl_user_onl{pid = U_Pid}} ->
-							Body = list_to_binary(lists:flatten(io_lib:format("User ~s accept your friend request", [binary_to_list(OurName)]))),
-							DataRev = #res_send_notification{title = <<"FRIEND ACCEPT">>,
-															 body = Body},
+							DataRev = #res_other_user_accept_friend_request{username = OurName, fullname = FullName},
 							ResponseRecord = #response{group = ?GROUP_NOTIFICATION,
-													   type = ?TYPE_SEND_NOTIFICATION,
+													   type = ?TYPE_OTHER_USER_ACCEPT_FRIEND_REQUEST,
 													   req_id = 0,
 													   result = 0,
 													   data = DataRev},
@@ -50,7 +48,7 @@ accept_friend_request(OurName, RId, From) ->
 			end
 	end.
 
-add_request_friend(OurName, ToUser) ->
+add_request_friend(OurName,FullName, ToUser) ->
 	%% Check friend status
 	case cs_friend_db:get(OurName, ToUser) of
 		#db_res{error = ?DB_DONE} ->
@@ -65,7 +63,8 @@ add_request_friend(OurName, ToUser) ->
 						{ok, #tbl_user_onl{pid = U_Pid}} ->
 							lager:info("Detect user ~p at Pid: ~p~n", [ToUser, U_Pid]),
 							DataRev = #res_received_friend_request{request_id = <<OurName/binary,<<",">>/binary,ToUser/binary>>,
-																   from_user = OurName},
+																   from_user = OurName,
+																   fullname = FullName},
 							ResponseRecord = #response{group = ?GROUP_FRIEND,
 													   type = ?TYPE_RECEIVED_FRIEND_REQUEST,
 													   req_id = 0,
@@ -178,4 +177,9 @@ get_friend_request(UserName,Page) ->
 			{?API_DONE, undefined};
 		#db_res{error = ?DB_DONE, result = List} ->
 			{?API_DONE, #res_get_list_friend_request{list = List}}
+	end.
+
+unfriend(UserName,FriendUserName) ->
+	case cs_friend_db:unfriend(UserName, FriendUserName) of
+		_ -> {?API_DONE, undefined}
 	end.

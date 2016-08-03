@@ -4,6 +4,7 @@
 -record(cmd_user_info,{username, token}).
 -record(cmd_me_info,{token}).
 -record(cmd_update_avatar,{token,avatar}).
+-record(cmd_update_device_token,{token,device_token}).
 -record(cmd_user_auth,{token}).
 -record(cmd_search_user,{token,keyword,page}).
 
@@ -16,7 +17,7 @@
 -record(cmd_reject_friend_request,{token, from_user}).
 -record(cmd_get_list_friend,{token, page}).
 -record(cmd_get_list_friend_request,{token,page}).
-
+-record(cmd_unfriend,{token,friend_username}).
 
 -define(GROUP_USER,<<"user">>).
 -define(GROUP_CHAT,<<"chat">>).
@@ -30,6 +31,8 @@
 -define(TYPE_USER_AUTH,<<"user_auth">>).
 -define(TYPE_UPDATE_AVATAR,<<"update_avatar">>).
 -define(TYPE_SEARCH_USER,<<"search_user">>).
+-define(TYPE_UPDATE_DEVICE_TOKEN,<<"update_device_token">>).
+-define(TYPE_KICK_ANOTHER_LOGIN, <<"kick_another_login">>).
 
 -define(TYPE_SEND_MESSAGE,<<"send_message">>).
 -define(TYPE_RECEIVED_MESSAGE,<<"received_message">>).
@@ -45,4 +48,6 @@
 -define(TYPE_GET_LIST_FRIEND,<<"get_list_friend">>).
 -define(TYPE_NOTICE_FRIEND_ONLINE,<<"notice_friend_online">>).
 -define(TYPE_NOTICE_FRIEND_OFFLINE,<<"notice_friend_offline">>).
+-define(TYPE_UNFRIEND,<<"unfriend">>).
+-define(TYPE_OTHER_USER_ACCEPT_FRIEND_REQUEST,<<"other_user_accept_friend_request">>).
 

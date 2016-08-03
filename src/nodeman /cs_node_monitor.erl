@@ -60,10 +60,10 @@ init([]) ->
 	Timeout :: non_neg_integer() | infinity,
 	Reason :: term().
 %% ====================================================================
-handle_call({get_db_node}, From, State) ->
+handle_call({get_db_node}, _From, State) ->
 	R = [NodeName || {?DB_NODE,NodeName} <- State#state.db_node],
 	{reply, R, State};
-handle_call(Request, From, State) ->
+handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
@@ -84,9 +84,10 @@ handle_ping([Node|Tail], State) ->
 handle_ping([],State) ->
 	State.
 
+findNode(_NodeName, []) -> undefined;
 findNode(NodeName, [{_,NodeName} = Node | _]) -> Node;
-findNode(NodeName,[Node|Tail]) -> findNode(NodeName, Tail);
-findNode(_NodeName, []) -> undefined.
+findNode(NodeName,[_Node|Tail]) -> findNode(NodeName, Tail).
+
 
 %% handle_cast/2
 %% ====================================================================
@@ -118,7 +119,7 @@ handle_cast({handle_install_node,ListNode}, State) ->
 			{ok,TimeRef} = timer:send_interval(1000, {'$gen_cast', retry_connect}),
 			{noreply, NewState#state{timer_ref = TimeRef, nodes = State#state.nodes ++ ListNode}}
 	end;
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 
@@ -143,7 +144,7 @@ handle_info({nodedown,NodeName}, State) ->
 					?BACKEND_NODE -> State#state{disconnected = [Node|State#state.disconnected], cs_node = State#state.cs_node -- [Node]}
 				end,
 	{noreply, NewState#state{timer_ref = TimeRef}};
-handle_info(Info, State) ->
+handle_info(_Info, State) ->
     {noreply, State}.
 
 
@@ -156,7 +157,7 @@ handle_info(Info, State) ->
 			| {shutdown, term()}
 			| term().
 %% ====================================================================
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
@@ -168,7 +169,7 @@ terminate(Reason, State) ->
 	OldVsn :: Vsn | {down, Vsn},
 	Vsn :: term().
 %% ====================================================================
-code_change(OldVsn, State, Extra) ->
+code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 
